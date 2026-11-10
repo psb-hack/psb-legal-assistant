@@ -1,0 +1,26 @@
+# Data from organizers (not redistributed)
+data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Run artefacts
+submission.csv
+reports/
+dist/
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
