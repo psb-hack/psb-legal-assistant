@@ -74,27 +74,31 @@
 | 26 | [PSB-22](https://d12-team.atlassian.net/browse/PSB-22) Классификатор сценария запроса | p0 | D |
 | 27 | [PSB-25](https://d12-team.atlassian.net/browse/PSB-25) Ложные предпосылки: выявление и исправление | p0 | D |
 | 28 | [PSB-26](https://d12-team.atlassian.net/browse/PSB-26) Частичная информация и обоснованный отказ | p0 | D |
-| 29 | [PSB-41](https://d12-team.atlassian.net/browse/PSB-41) HTTP API ассистента | p0 | G |
-| 30 | [PSB-42](https://d12-team.atlassian.net/browse/PSB-42) Чат-интерфейс с панелью источников | p0 | G |
-| 31 | [PSB-43](https://d12-team.atlassian.net/browse/PSB-43) Docker: Dockerfile, compose.yaml, .dockerignore, .env.example | p0 | G |
-| 32 | [PSB-44](https://d12-team.atlassian.net/browse/PSB-44) README по требованиям финальной сдачи | p0 | G |
+| 29 | [PSB-56](https://d12-team.atlassian.net/browse/PSB-56) Дизайн-концепция интерфейса: стиль ПСБ, типографика, макеты | p0 | G |
+| 30 | [PSB-41](https://d12-team.atlassian.net/browse/PSB-41) HTTP API ассистента | p0 | G |
+| 31 | [PSB-57](https://d12-team.atlassian.net/browse/PSB-57) Поток этапов обработки в интерфейс (SSE) | p0 | G |
+| 32 | [PSB-42](https://d12-team.atlassian.net/browse/PSB-42) Чат-интерфейс с панелью источников | p0 | G |
+| 33 | [PSB-43](https://d12-team.atlassian.net/browse/PSB-43) Docker: Dockerfile, compose.yaml, .dockerignore, .env.example | p0 | G |
+| 34 | [PSB-44](https://d12-team.atlassian.net/browse/PSB-44) README по требованиям финальной сдачи | p0 | G |
 | | **Фаза 3. Усиление** | | |
-| 33 | [PSB-28](https://d12-team.atlassian.net/browse/PSB-28) Устойчивость к смене роли, поддельным системным сообщениям и давлению | p1 | D |
-| 34 | [PSB-27](https://d12-team.atlassian.net/browse/PSB-27) Противоправные запросы | p1 | D |
-| 35 | [PSB-29](https://d12-team.atlassian.net/browse/PSB-29) Неоднозначный объект: уточнять или отвечать по всем вариантам | p1 | D |
-| 36 | [PSB-38](https://d12-team.atlassian.net/browse/PSB-38) Локальный LLM-судья по методике организаторов | p1 | F |
-| 37 | [PSB-19](https://d12-team.atlassian.net/browse/PSB-19) Реранкер Qwen3 с бюджетом и отключением | p1 | C |
-| 38 | [PSB-14](https://d12-team.atlassian.net/browse/PSB-14) Предрасчёт индекса и проверка совпадения базы | p1 | B |
-| 39 | [PSB-39](https://d12-team.atlassian.net/browse/PSB-39) Профилирование скорости и числа вызовов | p1 | F |
-| 40 | [PSB-33](https://d12-team.atlassian.net/browse/PSB-33) Проверка, что пункт действительно подтверждает утверждение | p1 | E |
-| 41 | [PSB-20](https://d12-team.atlassian.net/browse/PSB-20) Расширение контекста соседними положениями | p2 | C |
-| 42 | [PSB-45](https://d12-team.atlassian.net/browse/PSB-45) Полировка интерфейса и доступность | p1 | G |
-| 43 | [PSB-34](https://d12-team.atlassian.net/browse/PSB-34) Метрики достоверности в логах и интерфейсе | p2 | E |
+| 35 | [PSB-28](https://d12-team.atlassian.net/browse/PSB-28) Устойчивость к смене роли, поддельным системным сообщениям и давлению | p1 | D |
+| 36 | [PSB-27](https://d12-team.atlassian.net/browse/PSB-27) Противоправные запросы | p1 | D |
+| 37 | [PSB-29](https://d12-team.atlassian.net/browse/PSB-29) Неоднозначный объект: уточнять или отвечать по всем вариантам | p1 | D |
+| 38 | [PSB-58](https://d12-team.atlassian.net/browse/PSB-58) Пиксельные помощники: персонажи, спрайты, анимация этапов | p1 | G |
+| 39 | [PSB-59](https://d12-team.atlassian.net/browse/PSB-59) Подсказки и навигация с помощью помощников | p1 | G |
+| 40 | [PSB-38](https://d12-team.atlassian.net/browse/PSB-38) Локальный LLM-судья по методике организаторов | p1 | F |
+| 41 | [PSB-19](https://d12-team.atlassian.net/browse/PSB-19) Реранкер Qwen3 с бюджетом и отключением | p1 | C |
+| 42 | [PSB-14](https://d12-team.atlassian.net/browse/PSB-14) Предрасчёт индекса и проверка совпадения базы | p1 | B |
+| 43 | [PSB-39](https://d12-team.atlassian.net/browse/PSB-39) Профилирование скорости и числа вызовов | p1 | F |
+| 44 | [PSB-33](https://d12-team.atlassian.net/browse/PSB-33) Проверка, что пункт действительно подтверждает утверждение | p1 | E |
+| 45 | [PSB-20](https://d12-team.atlassian.net/browse/PSB-20) Расширение контекста соседними положениями | p2 | C |
+| 46 | [PSB-45](https://d12-team.atlassian.net/browse/PSB-45) Полировка интерфейса и доступность | p1 | G |
+| 47 | [PSB-34](https://d12-team.atlassian.net/browse/PSB-34) Метрики достоверности в логах и интерфейсе | p2 | E |
 | | **Фаза 4. Защита** | | |
-| 44 | [PSB-47](https://d12-team.atlassian.net/browse/PSB-47) Презентация PDF | p1 | H |
-| 45 | [PSB-48](https://d12-team.atlassian.net/browse/PSB-48) Сценарий живой демонстрации | p1 | H |
-| 46 | [PSB-49](https://d12-team.atlassian.net/browse/PSB-49) Сценарий внедрения в банке | p2 | H |
-| 47 | [PSB-50](https://d12-team.atlassian.net/browse/PSB-50) Подготовка к вопросам жюри | p2 | H |
+| 48 | [PSB-47](https://d12-team.atlassian.net/browse/PSB-47) Презентация PDF | p1 | H |
+| 49 | [PSB-48](https://d12-team.atlassian.net/browse/PSB-48) Сценарий живой демонстрации | p1 | H |
+| 50 | [PSB-49](https://d12-team.atlassian.net/browse/PSB-49) Сценарий внедрения в банке | p2 | H |
+| 51 | [PSB-50](https://d12-team.atlassian.net/browse/PSB-50) Подготовка к вопросам жюри | p2 | H |
 
 ## Эпики
 
@@ -123,6 +127,7 @@
 | [08 — Процесс](docs/08-workflow.md) | Доска, ветки, коммиты, PR, сабмиты |
 | [09 — Финальная сдача](docs/09-final-delivery.md) | Чек-лист материалов и допуска |
 | [10 — Практики по задачам](docs/10-practices.md) | Как делать каждую задачу: проверенные подходы, чистый код, частые ошибки |
+| [11 — Интерфейс](docs/11-interface.md) | Стиль ПСБ, запрет «нейрослопа», раскладка, пиксельные помощники, доступность |
 | [Журнал сабмитов](docs/submissions.md) | Что отправляли и что получили |
 | [Наборы для оценки](eval/README.md) | 39 кейсов golden-набора и шаблоны атак |
 
