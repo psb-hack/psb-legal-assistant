@@ -28,7 +28,7 @@ disallow_incomplete_defs = false
 ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S311"]
+"tests/**" = ["S101", "S311", "S603"]
 "scripts/run_platform.py" = ["S603", "S607"]
 "scripts/fake_proxy.py" = ["S104"]
 "src/lex_retry.py" = ["S311"]
