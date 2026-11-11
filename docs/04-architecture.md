@@ -94,13 +94,15 @@ flowchart TD
 
 ## Целевая структура репозитория
 
+Раскладка ядра под плоский ZIP — [ADR 0001](adr/0001-flat-submission-modules.md).
+
 ```
-solution.py          точка входа сабмита
-<ядро>/              модули пайплайна (имя и способ сборки — ADR, PSB-2)
-web/                 HTTP API и интерфейс
+src/                 solution.py и плоские модули lex_*.py (в ZIP копируются в корень)
+web/                 HTTP API и интерфейс (в сабмит не входит)
 eval/                golden-набор, шаблоны атак, локальный судья, отчёты
 scripts/             сборка ZIP, прогон в «платформенном» контейнере
 tests/               модульные, контрактные и состязательные тесты
 docs/                эта документация и ADR
+requirements.txt     пакеты организаторов
 Dockerfile, compose.yaml, .dockerignore, .env.example
 ```
