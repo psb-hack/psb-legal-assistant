@@ -44,7 +44,8 @@ class FakeOpenAIServer:
     @property
     def base_url(self) -> str:
         host, port = self._httpd.server_address[:2]
-        return f"http://{host}:{port}/v1"
+        host_s = host.decode("ascii") if isinstance(host, bytes) else str(host)
+        return f"http://{host_s}:{port}/v1"
 
     def start(self) -> str:
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
