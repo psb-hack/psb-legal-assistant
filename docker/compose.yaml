@@ -1,0 +1,41 @@
+# Локальный прогон как на платформе: 8 CPU, 16g, 20 мин, сеть только до прокси.
+services:
+  proxy:
+    image: python:3.11-slim
+    command: ["python", "/scripts/fake_proxy.py", "--host", "0.0.0.0", "--port", "8080"]
+    volumes:
+      - ../scripts:/scripts:ro
+    networks:
+      - platform
+    expose:
+      - "8080"
+
+  runner:
+    build:
+      context: ..
+      dockerfile: docker/platform.Dockerfile
+    cpus: 8
+    mem_limit: 16g
+    user: "10001:10001"
+    working_dir: /work
+    volumes:
+      - ../dist/platform-run:/work
+      - ../data:/data:ro
+    environment:
+      DATA_DIR: /data
+      LLM_BASE_URL: http://proxy:8080/v1
+      LLM_API_KEY: local-fake
+      LLM_MODEL: deepseek
+      EMB_MODEL: bge-m3
+      RERANKER_MODEL: qwen-rerank
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      - proxy
+    networks:
+      - platform
+    command: ["timeout", "1200", "python", "solution.py"]
+
+networks:
+  platform:
+    internal: true

@@ -6,6 +6,7 @@ from lex_errors import SubmissionError
 from lex_submission import (
     NO_PROVISIONS_YET,
     Question,
+    check_submission,
     load_questions,
     placeholder_answer,
     write_submission,
@@ -26,6 +27,14 @@ def test_load_and_write_roundtrip(tmp_path: Path) -> None:
     assert NO_PROVISIONS_YET in text
 
 
+def test_load_questions_accepts_bom_and_quoted_header(tmp_path: Path) -> None:
+    path = tmp_path / "questions.csv"
+    path.write_text('"id","question"\n"1","срок?"\n', encoding="utf-8-sig")
+    rows = load_questions(path)
+    assert rows[0].id == "1"
+    assert "срок" in rows[0].text
+
+
 def test_duplicate_id_rejected(tmp_path: Path) -> None:
     path = tmp_path / "questions.csv"
     path.write_text("id,question\n1,a\n1,b\n", encoding="utf-8")
@@ -36,6 +45,12 @@ def test_duplicate_id_rejected(tmp_path: Path) -> None:
 def test_empty_answer_rejected(tmp_path: Path) -> None:
     with pytest.raises(SubmissionError, match="пустой ответ"):
         write_submission(tmp_path / "submission.csv", {"1": "  "})
+
+
+def test_check_submission_rejects_empty_file(tmp_path: Path) -> None:
+    path = tmp_path / "missing.csv"
+    with pytest.raises(SubmissionError, match="нет файла"):
+        check_submission(path, ["1"])
 
 
 def test_placeholder_has_no_demo_facts() -> None:
