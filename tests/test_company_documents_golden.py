@@ -12,7 +12,15 @@ import pytest
 import yaml
 
 from lex_company_parsing import parse
-from lex_documents import DocumentPart, ParsedDocument
+from lex_document_header import read_header
+from lex_documents import (
+    DocumentHeader,
+    DocumentKind,
+    DocumentPart,
+    DocumentStatus,
+    ParsedDocument,
+    Party,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 ARCHIVE = REPO / "data" / "knowledge-base.zip"
@@ -24,7 +32,10 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _parsed(file_marker: str) -> ParsedDocument:
+WITH_TREE = [item for item in EXPECTED if "sections" in item]
+
+
+def _text(file_marker: str) -> str:
     with zipfile.ZipFile(ARCHIVE) as archive:
         names = [
             name
@@ -32,10 +43,34 @@ def _parsed(file_marker: str) -> ParsedDocument:
             if file_marker in unicodedata.normalize("NFC", name)
         ]
         assert len(names) == 1, names
-        return parse(archive.read(names[0]).decode("utf-8-sig"))
+        return archive.read(names[0]).decode("utf-8-sig")
+
+
+def _parsed(file_marker: str) -> ParsedDocument:
+    return parse(_text(file_marker))
+
+
+def _expected_header(header: dict[str, Any]) -> DocumentHeader:
+    return DocumentHeader(
+        kind=DocumentKind(header["kind"]),
+        title=header["title"],
+        number=header["number"],
+        dated=header["dated"],
+        parties=tuple(Party(**party) for party in header["parties"]),
+        edition=header["edition"],
+        effective_from=header["effective_from"],
+        status=DocumentStatus(header["status"]),
+        repealed_from=header["repealed_from"],
+    )
 
 
 @pytest.mark.parametrize("expected", EXPECTED, ids=lambda item: item["file"])
+def test_document_header_matches_golden(expected: dict[str, Any]) -> None:
+    header = read_header(_text(expected["file"]))
+    assert header == _expected_header(expected["header"])
+
+
+@pytest.mark.parametrize("expected", WITH_TREE, ids=lambda item: item["file"])
 def test_document_tree_matches_golden(expected: dict[str, Any]) -> None:
     document = _parsed(expected["file"])
     body = [item for item in document.provisions if item.part is DocumentPart.BODY]
