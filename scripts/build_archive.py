@@ -12,6 +12,9 @@ _ZIP_EPOCH = (2026, 1, 1, 0, 0, 0)
 SRC_MODULES = (
     "solution.py",
     "lex_errors.py",
+    "lex_gateway.py",
+    "lex_models.py",
+    "lex_retry.py",
     "lex_secrets.py",
     "lex_settings.py",
     "lex_submission.py",
