@@ -61,10 +61,10 @@ class RetryPolicy:
 
     def delay_after(self, attempt_index: int, retry_after: float | None) -> float:
         cap = min(self.max_delay, self.base_delay * (2**attempt_index))
-        wait = self.rng.random() * cap
+        wait = float(self.rng.random()) * cap
         if retry_after is not None and retry_after > 0:
             wait = max(wait, retry_after)
-        return wait
+        return float(wait)
 
 
 def parse_retry_after(value: str | None) -> float | None:
