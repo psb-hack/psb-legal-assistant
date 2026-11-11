@@ -13,6 +13,7 @@
 3. **Скачать данные** из [папки организаторов](https://drive.google.com/drive/folders/1lendasLVlcKUcuM8mOrWKHD-C2dWtm9F) в `data/`: `knowledge-base.zip`, `demo_questions.csv`, `demo_output.csv`, `sample_submission.zip`, `requirements.txt`. Каталог `data/` не коммитится.
 4. **Взять задачу:** верхнюю свободную в колонке To Do. Правила веток, коммитов и PR — в [процессе работы](docs/08-workflow.md).
 5. **Перед началом задачи прочитать её раздел в [практиках по задачам](docs/10-practices.md)** и писать код по [стандартам](docs/06-engineering.md). Задача закрывается по Definition of Done оттуда же.
+6. **Локально те же проверки, что в CI:** `pip install -r requirements-dev.txt` и `pre-commit install`. На PR гоняются lint, mypy, pytest, сборка ZIP и gitleaks.
 
 ## Главное о задаче
 

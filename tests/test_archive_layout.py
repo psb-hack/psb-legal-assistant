@@ -13,12 +13,12 @@ REPO = Path(__file__).resolve().parents[1]
 def test_archive_is_flat_and_runs(tmp_path: Path) -> None:
     sys.path.insert(0, str(REPO / "scripts"))
     try:
-        from build_archive import SRC_MODULES, build
+        from build_archive import SRC_MODULES, ArchiveManifest, build
     finally:
         sys.path.pop(0)
 
     archive_path = tmp_path / "submission.zip"
-    build(REPO, archive_path)
+    build(ArchiveManifest.default(REPO), archive_path)
 
     with zipfile.ZipFile(archive_path) as archive:
         names = archive.namelist()

@@ -8,7 +8,7 @@ src = ["src", "scripts", "tests"]
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "N", "PT", "RUF"]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "N", "PT", "RUF", "S"]
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.mypy]
@@ -16,5 +16,19 @@ python_version = "3.10"
 strict = true
 files = ["src"]
 
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["build_archive", "fake_proxy", "run_platform"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+ignore_missing_imports = true
+
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "S311", "S603"]
+"scripts/run_platform.py" = ["S603", "S607"]
+"scripts/fake_proxy.py" = ["S104"]
+"src/lex_retry.py" = ["S311"]
