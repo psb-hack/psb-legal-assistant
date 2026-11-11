@@ -128,6 +128,24 @@ def test_docker_mode_skipped_without_daemon() -> None:
     assert docker_available() is False
 
 
+def test_fake_proxy_get_index_is_html() -> None:
+    _scripts()
+    from fake_proxy import FakeOpenAIServer
+
+    server = FakeOpenAIServer()
+    base = server.start()
+    try:
+        root = "http://" + base.split("://", 1)[1].split("/", 1)[0]
+        response = httpx.get(root + "/", timeout=5.0)
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "chat/completions" in response.text
+        health = httpx.get(root + "/health", timeout=5.0)
+        assert health.json()["ok"] is True
+    finally:
+        server.stop()
+
+
 def test_httpx_reaches_fake_proxy_health_shape() -> None:
     _scripts()
     from fake_proxy import FakeOpenAIServer

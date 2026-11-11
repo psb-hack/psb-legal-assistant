@@ -63,6 +63,30 @@ def _make_handler(state: ProxyState) -> type[BaseHTTPRequestHandler]:
         def log_message(self, format: str, *args: object) -> None:
             return
 
+        def do_GET(self) -> None:
+            path = urlparse(self.path).path
+            if path in ("", "/", "/index.html"):
+                with state.lock:
+                    hits = state.hits
+                page = _INDEX_HTML.replace("{{HITS}}", str(hits))
+                self._raw(200, "text/html; charset=utf-8", page.encode("utf-8"))
+                return
+            if path.rstrip("/") == "/health":
+                with state.lock:
+                    hits = state.hits
+                self._json(200, {"ok": True, "hits": hits})
+                return
+            self._json(404, {"error": "unknown path"})
+
+        def do_HEAD(self) -> None:
+            path = urlparse(self.path).path
+            if path in ("", "/", "/index.html", "/health"):
+                self.send_response(200)
+                self.end_headers()
+                return
+            self.send_response(404)
+            self.end_headers()
+
         def do_POST(self) -> None:
             length = int(self.headers.get("Content-Length") or "0")
             raw = self.rfile.read(length) if length else b"{}"
@@ -96,16 +120,85 @@ def _make_handler(state: ProxyState) -> type[BaseHTTPRequestHandler]:
             self._json(404, {"error": "unknown path"})
 
         def _json(self, status: int, body: dict[str, Any]) -> None:
-            data = json.dumps(body).encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
+            data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+            extra = {}
             if status == 429:
-                self.send_header("Retry-After", "0.01")
+                extra["Retry-After"] = "0.01"
+            self._raw(status, "application/json; charset=utf-8", data, extra)
+
+        def _raw(
+            self,
+            status: int,
+            content_type: str,
+            data: bytes,
+            extra: dict[str, str] | None = None,
+        ) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            if extra:
+                for key, value in extra.items():
+                    self.send_header(key, value)
             self.end_headers()
             self.wfile.write(data)
 
     return Handler
+
+
+_INDEX_HTML = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Фейковый прокси</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font: 16px/1.4 system-ui, sans-serif;
+      max-width: 42rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    code, pre { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; }
+    textarea, button { font: inherit; }
+    textarea { width: 100%; min-height: 6rem; }
+    pre { white-space: pre-wrap; background: #1111; padding: 0.75rem; }
+    label { display: block; margin: 0.75rem 0 0.25rem; }
+  </style>
+</head>
+<body>
+  <h1>Фейковый OpenAI-прокси</h1>
+  <p>Это не чат ассистента. Браузер ходил GET на API, поэтому раньше
+     был 501. POST: <code>/v1/chat/completions</code>,
+     <code>/v1/embeddings</code>, <code>/v1/rerank</code>.
+     Запросов со старта: {{HITS}}.</p>
+  <label for="q">Сообщение</label>
+  <textarea id="q">Какой срок оплаты?</textarea>
+  <p><button type="button" id="go">Отправить в /v1/chat/completions</button></p>
+  <pre id="out"></pre>
+  <script>
+    document.getElementById("go").onclick = async () => {
+      const text = document.getElementById("q").value;
+      const out = document.getElementById("out");
+      out.textContent = "…";
+      try {
+        const res = await fetch("/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "deepseek",
+            messages: [{ role: "user", content: text }],
+          }),
+        });
+        out.textContent = JSON.stringify(await res.json(), null, 2);
+      } catch (err) {
+        out.textContent = String(err);
+      }
+    };
+  </script>
+</body>
+</html>
+"""
 
 
 def _script_from_query(path: str, default: ProxyScript) -> ProxyScript:
