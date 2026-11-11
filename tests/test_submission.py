@@ -27,6 +27,14 @@ def test_load_and_write_roundtrip(tmp_path: Path) -> None:
     assert NO_PROVISIONS_YET in text
 
 
+def test_load_questions_accepts_bom_and_quoted_header(tmp_path: Path) -> None:
+    path = tmp_path / "questions.csv"
+    path.write_text('"id","question"\n"1","срок?"\n', encoding="utf-8-sig")
+    rows = load_questions(path)
+    assert rows[0].id == "1"
+    assert "срок" in rows[0].text
+
+
 def test_duplicate_id_rejected(tmp_path: Path) -> None:
     path = tmp_path / "questions.csv"
     path.write_text("id,question\n1,a\n1,b\n", encoding="utf-8")
