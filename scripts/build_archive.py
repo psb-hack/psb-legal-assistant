@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 
 # Дата в ZipInfo фиксирована, чтобы одинаковый вход давал одинаковый хеш.
@@ -21,25 +22,36 @@ SRC_MODULES = (
 )
 
 
-def build(repo_root: Path, dest: Path) -> Path:
-    src = repo_root / "src"
-    requirements = repo_root / "requirements.txt"
-    if not requirements.is_file():
-        raise FileNotFoundError(requirements)
+@dataclass(frozen=True, slots=True)
+class ArchiveManifest:
+    entries: tuple[tuple[str, Path], ...]
+
+    @classmethod
+    def default(cls, repo_root: Path) -> ArchiveManifest:
+        src = repo_root / "src"
+        requirements = repo_root / "requirements.txt"
+        if not requirements.is_file():
+            raise FileNotFoundError(requirements)
+        items: list[tuple[str, Path]] = [("requirements.txt", requirements)]
+        for name in SRC_MODULES:
+            path = src / name
+            if not path.is_file():
+                raise FileNotFoundError(path)
+            items.append((name, path))
+        return cls(tuple(items))
+
+
+def build(manifest: ArchiveManifest, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    entries: list[tuple[str, Path]] = [
-        ("requirements.txt", requirements),
-    ]
-    for name in SRC_MODULES:
-        path = src / name
-        if not path.is_file():
-            raise FileNotFoundError(path)
-        entries.append((name, path))
-    entries.sort(key=lambda item: item[0])
+    entries = sorted(manifest.entries, key=lambda item: item[0])
     with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for arcname, path in entries:
+            if "/" in arcname or "\\" in arcname:
+                raise ValueError(f"в архиве только корень: {arcname}")
             info = zipfile.ZipInfo(arcname, date_time=_ZIP_EPOCH)
             info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 0
+            info.external_attr = 0o644 << 16
             archive.writestr(info, path.read_bytes())
     return dest
 
@@ -59,7 +71,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     dest = args.out if args.out is not None else args.root / "dist" / "submission.zip"
-    path = build(args.root, dest)
+    path = build(ArchiveManifest.default(args.root), dest)
     print(path)
 
 

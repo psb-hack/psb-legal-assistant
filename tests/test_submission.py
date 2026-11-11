@@ -6,6 +6,7 @@ from lex_errors import SubmissionError
 from lex_submission import (
     NO_PROVISIONS_YET,
     Question,
+    check_submission,
     load_questions,
     placeholder_answer,
     write_submission,
@@ -36,6 +37,12 @@ def test_duplicate_id_rejected(tmp_path: Path) -> None:
 def test_empty_answer_rejected(tmp_path: Path) -> None:
     with pytest.raises(SubmissionError, match="пустой ответ"):
         write_submission(tmp_path / "submission.csv", {"1": "  "})
+
+
+def test_check_submission_rejects_empty_file(tmp_path: Path) -> None:
+    path = tmp_path / "missing.csv"
+    with pytest.raises(SubmissionError, match="нет файла"):
+        check_submission(path, ["1"])
 
 
 def test_placeholder_has_no_demo_facts() -> None:

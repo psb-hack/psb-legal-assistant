@@ -168,11 +168,11 @@ def test_archive_includes_gateway_modules(tmp_path: Path) -> None:
     repo = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo / "scripts"))
     try:
-        from build_archive import SRC_MODULES, build
+        from build_archive import SRC_MODULES, ArchiveManifest, build
     finally:
         sys.path.pop(0)
     dest = tmp_path / "s.zip"
-    build(repo, dest)
+    build(ArchiveManifest.default(repo), dest)
     assert "lex_gateway.py" in SRC_MODULES
     import zipfile
 
