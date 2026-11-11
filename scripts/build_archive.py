@@ -18,6 +18,7 @@ SRC_MODULES = (
     "lex_documents.py",
     "lex_errors.py",
     "lex_gateway.py",
+    "lex_knowledge_base.py",
     "lex_models.py",
     "lex_numbering.py",
     "lex_paragraphs.py",

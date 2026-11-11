@@ -1,11 +1,13 @@
+import pytest
+
 from lex_company_parsing import parse
 from lex_documents import (
     ClauseNumber,
     DocumentPart,
     Heading,
+    ParagraphNumber,
     ParsedDocument,
     Provision,
-    cite,
 )
 
 STORAGE_CONTRACT = """\
@@ -125,12 +127,59 @@ def test_bom_crlf_and_blank_lines_do_not_change_result() -> None:
     assert parse(noisy) == parse(STORAGE_CONTRACT)
 
 
-def test_citation_names_document_and_clause() -> None:
-    document = parse(STORAGE_CONTRACT)
-    title = "Договор хранения № Х-01/2030"
-    assert (
-        cite(title, _clause(document, 2, 2)) == "Договор хранения № Х-01/2030, п. 2.2"
+MEMO = """\
+ООО «РОМАШКА»
+Отдел кадров
+СЛУЖЕБНАЯ ЗАПИСКА № ОК-4 от 20.04.2031
+О графике отпусков
+График отпусков утверждается до 15 декабря.
+Пункт 2.3 правил изложить в следующей редакции:
+«2.3. Отпуск делится на части по соглашению сторон».
+Начальник отдела кадров А. А. Орлова
+"""
+
+
+def test_document_without_clauses_keeps_its_header_as_preamble() -> None:
+    preamble = _in_part(parse(MEMO), DocumentPart.PREAMBLE)
+    assert [item.text for item in preamble] == [
+        "ООО «РОМАШКА»",
+        "Отдел кадров",
+        "СЛУЖЕБНАЯ ЗАПИСКА № ОК-4 от 20.04.2031",
+        "О графике отпусков",
+    ]
+
+
+def test_paragraphs_of_body_text_are_numbered_from_one() -> None:
+    body = _in_part(parse(MEMO), DocumentPart.BODY)
+    assert [item.label for item in body] == ["абз. 1", "абз. 2", "абз. 3", "абз. 4"]
+    assert body[0].text == "График отпусков утверждается до 15 декабря."
+    assert body[0].number == ParagraphNumber(1)
+
+
+def test_quoted_clause_of_another_document_stays_a_paragraph() -> None:
+    body = _in_part(parse(MEMO), DocumentPart.BODY)
+    assert body[2].text == "«2.3. Отпуск делится на части по соглашению сторон»."
+    assert body[2].headings == ()
+
+
+def test_memo_with_numbered_points_is_parsed_into_clauses() -> None:
+    document = parse(
+        "СЛУЖЕБНАЯ ЗАПИСКА № ОК-5 от 21.04.2031\n"
+        "1. График отпусков утверждается до 15 декабря.\n"
+        "2. Перенос отпуска согласуется с руководителем.\n"
     )
-    assert cite(title, document.provisions[0]) == (
-        "Договор хранения № Х-01/2030, преамбула"
-    )
+    assert [item.label for item in document.provisions] == [
+        "преамбула",
+        "п. 1",
+        "п. 2",
+    ]
+
+
+@pytest.mark.parametrize("text", [STORAGE_CONTRACT, MEMO])
+def test_positions_number_provisions_in_document_order(text: str) -> None:
+    provisions = parse(text).provisions
+    assert [item.position for item in provisions] == list(range(1, len(provisions) + 1))
+
+
+def test_no_paragraph_of_unnumbered_document_is_lost() -> None:
+    assert [item.text for item in parse(MEMO).provisions] == MEMO.splitlines()
