@@ -29,6 +29,8 @@ ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S311", "S603"]
+# Абзац статьи закона в выгрузке — одна строка; в тестах он записан так же.
+"tests/test_law_*.py" = ["E501"]
 "scripts/run_platform.py" = ["S603", "S607"]
 "scripts/fake_proxy.py" = ["S104"]
 "src/lex_retry.py" = ["S311"]
