@@ -12,6 +12,18 @@ _DEFAULT_DATA_DIR = "data"
 
 
 @dataclass(frozen=True, slots=True)
+class SanitizerThresholds:
+    """Пороги санитайзера базы. Подобраны на 21 документе базы и синтетике."""
+
+    # Столько детекторов со слабым сигналом дают карантин и без сильного сигнала.
+    weak_detectors_for_quarantine: int = 2
+    # Слов со смешением алфавитов в абзаце, начиная с которых это маскировка.
+    mixed_script_words_for_strong: int = 3
+    # Сколько соседних абзацев читается вместе в поиске разбитой вставки.
+    window_size: int = 3
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     data_dir: Path
     llm_base_url: str
@@ -24,6 +36,7 @@ class Settings:
     max_workers: int
     top_k: int
     reranker_top_n: int
+    sanitizer: SanitizerThresholds
 
     @classmethod
     def from_environ(cls, environ: Mapping[str, str]) -> Settings:
@@ -40,6 +53,7 @@ class Settings:
             max_workers=_int(environ.get("MAX_WORKERS"), 4),
             top_k=_int(environ.get("TOP_K"), 8),
             reranker_top_n=_int(environ.get("RERANKER_TOP_N"), 8),
+            sanitizer=SanitizerThresholds(),
         )
 
 

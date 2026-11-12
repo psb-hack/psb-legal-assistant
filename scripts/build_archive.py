@@ -12,8 +12,10 @@ _ZIP_EPOCH = (2026, 1, 1, 0, 0, 0)
 
 SRC_MODULES = (
     "solution.py",
+    "lex_address_detection.py",
     "lex_company_parsing.py",
     "lex_dates.py",
+    "lex_detection.py",
     "lex_document_header.py",
     "lex_documents.py",
     "lex_docx_reading.py",
@@ -28,8 +30,10 @@ SRC_MODULES = (
     "lex_numbering.py",
     "lex_paragraphs.py",
     "lex_retry.py",
+    "lex_sanitizer.py",
     "lex_secrets.py",
     "lex_settings.py",
+    "lex_structure_detection.py",
     "lex_submission.py",
 )
 
