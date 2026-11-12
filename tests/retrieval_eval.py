@@ -31,11 +31,14 @@ from lex_documents import (
 from lex_entity_catalog import DocumentEntry, EntityCatalog
 from lex_knowledge_base import KnowledgeBase
 from lex_normalization import comparison_key
-from lex_retrieval import Retriever
+from lex_retrieval import RankedProvision
 
 CASES = Path(__file__).resolve().parents[1] / "eval" / "cases.yaml"
 RECALL_DEPTHS = (5, 10, 20)
 
+# Поиск как функция «запрос, глубина → выдача»: у гибрида результат шире выдачи,
+# и под протокол Retriever он не подходит.
+Search = Callable[[str, int], Sequence[RankedProvision]]
 # Положения, любое из которых закрывает одну названную в источнике единицу: один
 # пункт договора — одно положение, статья закона без части — все её положения.
 Target = frozenset[ProvisionId]
@@ -134,7 +137,7 @@ def resolve_source(
 
 def evaluate(
     cases: Iterable[EvalCase],
-    retriever: Retriever,
+    search: Search,
     base: KnowledgeBase,
     catalog: EntityCatalog,
 ) -> RetrievalEvaluation:
@@ -157,9 +160,7 @@ def evaluate(
             unresolved.append((case, failed))
             continue
         targets = [target for found in resolved.values() for target in found or ()]
-        retrieved = [
-            hit.provision.id for hit in retriever.retrieve(case.question, depth)
-        ]
+        retrieved = [hit.provision.id for hit in search(case.question, depth)]
         outcomes.append(
             CaseOutcome(case, tuple(_rank_of(target, retrieved) for target in targets))
         )
