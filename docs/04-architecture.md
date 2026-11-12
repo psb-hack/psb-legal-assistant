@@ -600,8 +600,8 @@ BM25 не находит в первых десяти положениях: «в
 src/                 solution.py и плоские модули lex_*.py (в ZIP копируются в корень)
 web/                 HTTP API и интерфейс (в сабмит не входит)
 eval/                golden-набор, шаблоны атак, локальный судья, отчёты
-scripts/             сборка ZIP, прогон в «платформенном» контейнере
-tests/               модульные, контрактные и состязательные тесты; генератор атак kb_injection.py; оценка поиска retrieval_eval.py
+scripts/             сборка ZIP, прогон в «платформенном» контейнере, запуск состязательного набора (red_team.py)
+tests/               модульные, контрактные и состязательные тесты; генератор атак kb_injection.py; состязательный набор red_team_*.py; оценка поиска retrieval_eval.py
 docs/                эта документация и ADR
 requirements.txt     пакеты организаторов
 Dockerfile, compose.yaml, .dockerignore, .env.example
