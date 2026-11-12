@@ -56,6 +56,11 @@ class ViolationKind(Enum):
     MISSING_NAMES_DOCUMENT = "в перечне недостающего назван документ из контекста"
 
 
+_QUARANTINE_VIOLATIONS = frozenset(
+    {ViolationKind.QUARANTINED_VALUE, ViolationKind.QUARANTINED_WORDING}
+)
+
+
 class FactSupport(Enum):
     CONFIRMED = "confirmed"
     # Повтор слов пользователя: не провал, но и не подтверждённый факт.
@@ -84,6 +89,17 @@ class ClaimCheck(BaseModel):
     facts: tuple[FactCheck, ...]
     violations: tuple[ViolationKind, ...]
 
+    @property
+    def repairable(self) -> bool:
+        """Отклонено расхождением с названным положением, а не карантином.
+
+        Такое утверждение вторая попытка может исправить. Повтор карантинного
+        текста она не исправит: его просто удаляют.
+        """
+        return not self.confirmed and not _QUARANTINE_VIOLATIONS.intersection(
+            self.violations
+        )
+
 
 class MissingCheck(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -111,7 +127,8 @@ class VerificationReport(BaseModel):
 class Correction:
     # Ответ без неподтверждённых утверждений и строк `missing`.
     answer: GroundedAnswer
-    # Отчёт что-то отклонил, а дополнительный вызов модели ещё не израсходован.
+    # Есть утверждение, которое вторая попытка может исправить, а дополнительный
+    # вызов модели ещё не израсходован.
     regeneration_worthwhile: bool
 
 
@@ -137,9 +154,6 @@ class _Evidence:
         return tuple(fact for facts in self.by_provision.values() for fact in facts)
 
 
-_QUARANTINE_VIOLATIONS = frozenset(
-    {ViolationKind.QUARANTINED_VALUE, ViolationKind.QUARANTINED_WORDING}
-)
 # От дальнего расхождения к ближнему: в отчёт идёт самое близкое к подтверждению.
 _CLOSENESS = (
     ViolationKind.VALUE_NOT_FOUND,
@@ -197,7 +211,10 @@ def apply_report(generation: Generation, report: VerificationReport) -> Correcti
     )
     if report.passed:
         return Correction(answer, False)
-    worthwhile = not generation.extra_call_spent
+    # Строку `missing` и повтор карантина дешевле удалить, чем перегенерировать.
+    worthwhile = not generation.extra_call_spent and any(
+        check.repairable for check in report.claims
+    )
     if not claims and not missing:
         return Correction(NO_DATA_ANSWER, worthwhile)
     # «Да» и «нет» опираются на все утверждения ответа, как и в контракте.

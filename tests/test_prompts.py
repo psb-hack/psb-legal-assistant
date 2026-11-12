@@ -106,6 +106,7 @@ CODE_TEMPLATES = (
     lex_answer_rendering.NO_DOCUMENTS_ABOUT,
     lex_answer_rendering.REFUSAL_ABOUT,
     lex_answer_rendering.REFUSAL_NO_DATA,
+    lex_answer_rendering.UNCONFIRMED_IN_SOURCES,
     lex_answer_rendering.CLARIFICATION_REQUEST,
     lex_answer_rendering.ILLEGAL_LEAD,
     lex_answer_rendering.ROLE_REPLY,

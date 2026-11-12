@@ -12,7 +12,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import groupby
 
-from lex_answer_contract import AnswerVerdict, GroundedAnswer, GroundedClaim
+from lex_answer_contract import (
+    AnswerVerdict,
+    GroundedAnswer,
+    GroundedClaim,
+    UnconfirmedAnswer,
+)
 from lex_documents import Document, Provision, ProvisionId, cite
 from lex_errors import VerificationError
 from lex_knowledge_base import KnowledgeBase
@@ -20,6 +25,9 @@ from lex_scenarios import Scenario
 
 # Контракт ответа, docs/03: «до 150 слов».
 MAX_ANSWER_WORDS = 150
+# Ответ без подтверждённых утверждений указывает, где искать, а не перечисляет
+# весь документ: дальше третьего положения ссылка читателю не помогает.
+MAX_UNCONFIRMED_SOURCES = 3
 
 VERDICT_LEADS: Mapping[AnswerVerdict, str] = {
     AnswerVerdict.YES: "Да.",
@@ -34,6 +42,12 @@ REFUSAL_ABOUT = (
 REFUSAL_NO_DATA = (
     "В базе знаний нет документов, по которым можно ответить на этот вопрос. "
     "По памяти отвечать не буду."
+)
+# Документ найден, но утверждения о нём сняты проверкой: значение не называем
+# и «нет документов» не пишем — это было бы неправдой о базе.
+UNCONFIRMED_IN_SOURCES = (
+    "Положения по этому вопросу в базе знаний есть: {reference}. Подтвердить "
+    "ответ по их тексту не удалось, поэтому я его не привожу."
 )
 CLARIFICATION_REQUEST = "Уточните, пожалуйста: {details}."
 ILLEGAL_LEAD = "Помочь с этим не могу."
@@ -64,12 +78,16 @@ class _Passage:
     sources: tuple[tuple[Document, Provision], ...]
 
 
-def render(answer: GroundedAnswer, base: KnowledgeBase) -> str:
+def render(answer: GroundedAnswer | UnconfirmedAnswer, base: KnowledgeBase) -> str:
     """Текст ответа по контракту docs/03: прямой ответ, утверждения, границы.
 
     Ссылку получает только положение из утверждений answer: текст ссылок
     модель не пишет.
     """
+    if isinstance(answer, UnconfirmedAnswer):
+        shown = answer.provisions[:MAX_UNCONFIRMED_SOURCES]
+        sources = tuple(_found(cited, base) for cited in shown)
+        return UNCONFIRMED_IN_SOURCES.format(reference=_reference(sources, named=None))
     if answer.scenario is Scenario.OFF_TOPIC:
         return OFF_TOPIC_REPLY
     claims = answer.claims
