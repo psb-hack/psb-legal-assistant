@@ -18,6 +18,7 @@ from lex_documents import (
     HiddenContentKind,
     Provision,
     ProvisionId,
+    context_heading,
 )
 from lex_knowledge_base import KnowledgeBase
 from lex_normalization import NormalizedText, clean_text, normalize
@@ -69,6 +70,19 @@ class Screening:
         return frozenset(
             item.line for item in self.quarantined if item.provision_id == provision_id
         )
+
+
+@dataclass(frozen=True, slots=True)
+class AdmittedProvision:
+    """Положение в том виде, в каком санитайзер пропускает его к модели.
+
+    Сборка контекста принимает только этот тип, а создаёт его admit: передать
+    модели текст положения в обход карантина можно лишь собрав значение вручную.
+    """
+
+    id: ProvisionId
+    heading: str
+    text: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +148,20 @@ def admitted_text(
     lines = provision.text.split(_LINE_BREAK)
     kept = (line for index, line in enumerate(lines) if index not in rejected)
     return clean_text(_LINE_BREAK.join(kept))
+
+
+def admit(
+    document: Document, provision: Provision, screening: Screening
+) -> AdmittedProvision | None:
+    """None — положение в карантине целиком: в контекст ему нельзя."""
+    text = admitted_text(document, provision, screening)
+    if not text.strip():
+        return None
+    return AdmittedProvision(
+        id=document.provision_id(provision),
+        heading=clean_text(context_heading(document, provision)),
+        text=text,
+    )
 
 
 def visible_fragments(document: Document) -> tuple[Fragment, ...]:

@@ -40,6 +40,7 @@ SRC_MODULES = (
     "lex_normalization.py",
     "lex_numbering.py",
     "lex_paragraphs.py",
+    "lex_prompt_boundary.py",
     "lex_retry.py",
     "lex_role_markers.py",
     "lex_sanitizer.py",
