@@ -14,6 +14,7 @@ SRC_MODULES = (
     "solution.py",
     "lex_address_detection.py",
     "lex_answer_contract.py",
+    "lex_answer_rendering.py",
     "lex_company_parsing.py",
     "lex_dates.py",
     "lex_declension.py",
