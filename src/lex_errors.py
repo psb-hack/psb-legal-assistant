@@ -17,5 +17,9 @@ class VerificationError(LexError):
     """Утверждение не подтверждено положением из контекста."""
 
 
+class PromptBoundaryError(LexError):
+    """Контекст нельзя собрать так, чтобы данные остались внутри своих блоков."""
+
+
 class SubmissionError(LexError):
     """Нельзя записать корректный submission.csv."""

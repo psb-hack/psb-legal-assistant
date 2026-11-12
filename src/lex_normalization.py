@@ -42,6 +42,9 @@ _DASHES = dict.fromkeys(map(ord, DASH_VARIANTS), "-")
 _YO = {ord("ё"): "е"}
 _PUNCTUATION_VARIANTS = _QUOTES | _DASHES | _YO
 _WHITESPACE_RUN = re.compile(r"\s+")
+_LINE_BREAK = "\n"
+# Возврат каретки и разделители строки и абзаца модель читает как новую строку.
+_LINE_BREAKS = frozenset("\n\r  ")
 
 # «Cрок» с латинской «C» — одно слово; дефис и цифры слово разрывают.
 _WORD = re.compile(r"[^\W\d_]+")
@@ -99,6 +102,29 @@ class NormalizedText:
     findings: tuple[TextFinding, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class AlignedKey:
+    """Ключ детекции, в котором для каждого знака известен знак текста под ним.
+
+    Нужен тому, кто по находке в ключе правит сам текст. От detection_key
+    отличается двумя вещами: пробелы не свёрнуты, разрывы строк стоят на месте
+    (правка зависит от начала строки), и раскодированных блоков в нём нет —
+    это ключ того, что видно в тексте.
+    """
+
+    key: str
+    # sources[i] — позиция в тексте знака, из которого получен key[i].
+    sources: tuple[int, ...]
+    text_length: int
+
+    def source_span(self, start: int, end: int) -> tuple[int, int]:
+        """Отрезок текста под key[start:end]; пустой отрезок — место вставки."""
+        if start == len(self.sources):
+            return self.text_length, self.text_length
+        first = self.sources[start]
+        return first, first if end == start else self.sources[end - 1] + 1
+
+
 class _Script(Enum):
     CYRILLIC = "CYRILLIC"
     LATIN = "LATIN"
@@ -134,8 +160,29 @@ def comparison_key(text: str) -> str:
     return _WHITESPACE_RUN.sub(" ", lowered).strip()
 
 
+def detection_alignment(text: str) -> AlignedKey:
+    pieces: list[str] = []
+    sources: list[int] = []
+    for position, ch in enumerate(text):
+        piece = _detection_piece(ch)
+        pieces.append(piece)
+        sources.extend([position] * len(piece))
+    # Свёртка похожих букв меняет знак на знак: позиции остаются верными.
+    folded, _ = _fold_lookalikes("".join(pieces))
+    return AlignedKey(folded, tuple(sources), len(text))
+
+
 def _detection_base(text: str) -> str:
     return comparison_key(unicodedata.normalize("NFKC", text))
+
+
+def _detection_piece(ch: str) -> str:
+    """То, чем один знак текста представлен в ключе детекции."""
+    if ch in _LINE_BREAKS:
+        return _LINE_BREAK
+    compatible = unicodedata.normalize("NFKC", ch)
+    visible = "".join(part for part in compatible if not _is_removed(part))
+    return visible.casefold().translate(_PUNCTUATION_VARIANTS)
 
 
 def _is_removed(ch: str) -> bool:
