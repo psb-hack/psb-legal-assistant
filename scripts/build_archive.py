@@ -41,6 +41,7 @@ SRC_MODULES = (
     "lex_numbering.py",
     "lex_paragraphs.py",
     "lex_retry.py",
+    "lex_role_markers.py",
     "lex_sanitizer.py",
     "lex_secrets.py",
     "lex_settings.py",

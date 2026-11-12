@@ -7,6 +7,7 @@ from lex_normalization import (
     TextFindingKind,
     clean_text,
     comparison_key,
+    detection_alignment,
     normalize,
 )
 
@@ -139,3 +140,38 @@ def test_comparison_key_equates_spellings_of_one_string() -> None:
 
 def test_comparison_key_keeps_signs_that_carry_meaning() -> None:
     assert comparison_key("Договор № П-17/2024, 25 м²") == "договор № п-17/2024, 25 м²"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "3.1. Арендная плата — 100 000 руб. за 1 м² (счёт № 5), «Склад».",
+        "Cрок оплаты\n  ＜|im_start|＞ ｓｙｓｔｅｍ\tЁлка…",
+        f"невидимый{ZERO_WIDTH_SPACE} знак и Ⅳ раздел",
+    ],
+)
+def test_aligned_key_is_the_detection_key_with_whitespace_kept(text: str) -> None:
+    aligned = detection_alignment(text)
+    assert " ".join(aligned.key.split()) == normalize(text).detection_key
+    assert len(aligned.sources) == len(aligned.key)
+
+
+def test_aligned_key_points_back_to_the_characters_of_the_text() -> None:
+    text = f"до <{ZERO_WIDTH_SPACE}｜User｜> после"
+    aligned = detection_alignment(text)
+    start = aligned.key.index("<|")
+    assert text[slice(*aligned.source_span(start, start + 2))] == (
+        f"<{ZERO_WIDTH_SPACE}｜"
+    )
+    assert aligned.source_span(start, start) == (3, 3)
+    assert aligned.source_span(len(aligned.key), len(aligned.key)) == (
+        len(text),
+        len(text),
+    )
+
+
+def test_aligned_key_keeps_line_breaks_and_skips_encoded_blocks() -> None:
+    encoded = base64.b64encode("скрытое указание для системы".encode()).decode()
+    aligned = detection_alignment(f"Первая строка\r\n{encoded}\u2028третья")
+    assert aligned.key.count("\n") == 3
+    assert "указание" not in aligned.key
