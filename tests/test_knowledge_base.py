@@ -3,9 +3,32 @@ from pathlib import Path
 
 import pytest
 
-from lex_documents import DocumentId, DocumentKind
+from lex_documents import (
+    DocumentHeader,
+    DocumentId,
+    DocumentKind,
+    LawArticleHeader,
+    ProvisionId,
+    cite,
+)
 from lex_errors import KnowledgeBaseError
-from lex_knowledge_base import SourceFile, company_document, read_archive
+from lex_knowledge_base import (
+    SourceFile,
+    company_document,
+    load_knowledge_base,
+    read_archive,
+    read_document,
+)
+
+LAW_ARTICLE = (
+    "Источник: Статья 300. ТК РФ Учебный отпуск. Трудовой кодекс Российской "
+    "Федерации от 30.12.2001 N 197-ФЗ (ТК РФ) (с изменениями и дополнениями)\n"
+    "URL: https://example.org/labour/300\n"
+    "Дата выгрузки: 05.06.2031\n"
+    "Статья 300. Учебный отпуск\n"
+    "Учебный отпуск предоставляется работнику по его заявлению.\n"
+    "Отпуск оплачивается по среднему заработку.\n"
+)
 
 MEMO = (
     "СЛУЖЕБНАЯ ЗАПИСКА № ОК-4 от 20.04.2031\n"
@@ -97,3 +120,53 @@ def test_document_without_header_is_named_by_its_file() -> None:
     source = SourceFile("порядок/Порядок выдачи пропусков.txt", "Пропуск выдаётся.\n")
     document = company_document(DocumentId("d01"), source)
     assert document.header.title == "Порядок выдачи пропусков"
+
+
+def test_law_article_is_recognised_by_its_text_not_by_file_name() -> None:
+    document = read_document(
+        DocumentId("d02"), SourceFile("прочее/файл.txt", LAW_ARTICLE)
+    )
+    assert isinstance(document.header, LawArticleHeader)
+    assert cite(document, document.provisions[1]) == "ТК РФ, ст. 300, ч. 2"
+
+
+def test_file_from_laws_folder_without_source_header_is_a_company_document() -> None:
+    document = read_document(DocumentId("d02"), SourceFile("законы/записка.txt", MEMO))
+    assert isinstance(document.header, DocumentHeader)
+
+
+def test_documents_are_numbered_in_order_of_file_names(tmp_path: Path) -> None:
+    archive = _archive(
+        tmp_path / "base.zip",
+        {
+            "законы/статья.txt": LAW_ARTICLE.encode(),
+            "документы/записка.txt": MEMO.encode(),
+        },
+    )
+    base = load_knowledge_base(archive)
+    assert [document.id for document in base.documents] == ["d01", "d02"]
+    assert isinstance(base.documents[0].header, DocumentHeader)
+    assert isinstance(base.documents[1].header, LawArticleHeader)
+
+
+def test_provision_is_found_by_its_identifier(tmp_path: Path) -> None:
+    archive = _archive(
+        tmp_path / "base.zip",
+        {
+            "законы/статья.txt": LAW_ARTICLE.encode(),
+            "документы/записка.txt": MEMO.encode(),
+        },
+    )
+    base = load_knowledge_base(archive)
+    found = base.find(ProvisionId("d02.2"))
+    assert found is not None
+    document, provision = found
+    assert document.id == "d02"
+    assert provision.text == "Отпуск оплачивается по среднему заработку."
+
+
+def test_unknown_identifier_finds_nothing(tmp_path: Path) -> None:
+    archive = _archive(tmp_path / "base.zip", {"записка.txt": MEMO.encode()})
+    base = load_knowledge_base(archive)
+    assert base.find(ProvisionId("d01.99")) is None
+    assert base.find(ProvisionId("d07.1")) is None
