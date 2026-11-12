@@ -143,7 +143,7 @@ def boundary_violations(
             BoundaryViolation(BoundaryViolationKind.UNCLOSED_BLOCK, layout.unclosed)
         )
     for body in layout.bodies:
-        if _mentions_token(body, boundary):
+        if mentions_boundary(body, boundary):
             violations.append(
                 BoundaryViolation(BoundaryViolationKind.BOUNDARY_IN_DATA, body)
             )
@@ -226,12 +226,13 @@ def _closing_line(name: str, boundary: Boundary) -> str:
 def _data(text: str, boundary: Boundary) -> str:
     """Текст из недоверенного источника в том виде, в каком он войдёт в блок."""
     neutral = neutralize_role_markers(clean_text(text))
-    if _mentions_token(neutral, boundary):
+    if mentions_boundary(neutral, boundary):
         # Случайная метка в данных не встречается: совпадение значит, что метку
         # переиспользовали или генератор сломан. Новая метка это не исправит.
         raise PromptBoundaryError("метка границы встретилась в данных")
     return neutral
 
 
-def _mentions_token(text: str, boundary: Boundary) -> bool:
+def mentions_boundary(text: str, boundary: Boundary) -> bool:
+    """Метка запроса в тексте: в данных её быть не должно, в ответе модели — тоже."""
     return boundary.token in detection_alignment(text).key

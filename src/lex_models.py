@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
 from typing import Protocol
 
 
@@ -19,6 +20,23 @@ class ChatResult:
     finish_reason: str
 
 
+class FinishReason(Enum):
+    """Чем закончилась генерация, ответ которой дошёл до вызывающего кода."""
+
+    STOP = "stop"
+    LENGTH = "length"
+    CONTENT_FILTER = "content_filter"
+    # Прокси прислал значение, которого нет в этом списке, или не прислал ничего.
+    UNRECOGNIZED = "unrecognized"
+
+
+@dataclass(frozen=True, slots=True)
+class JsonCompletion:
+    # Бывает пустым или оборванным: что с этим делать, решает вызывающий код.
+    content: str
+    finish: FinishReason
+
+
 @dataclass(frozen=True, slots=True)
 class RankedDocument:
     index: int
@@ -27,6 +45,10 @@ class RankedDocument:
 
 class ChatModel(Protocol):
     def complete(self, turns: Sequence[ChatTurn]) -> ChatResult: ...
+
+
+class JsonChatModel(Protocol):
+    def complete_json(self, turns: Sequence[ChatTurn]) -> JsonCompletion: ...
 
 
 class Embedder(Protocol):
