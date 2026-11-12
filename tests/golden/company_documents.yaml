@@ -1,9 +1,22 @@
-# Ожидаемое дерево положений документов компании из knowledge-base.zip.
-# Текста документов здесь нет: только адреса, заголовки разделов и короткие метки.
-# file — часть имени файла в архиве; clauses — число пунктов раздела;
-# requisites — номер раздела реквизитов; markers — фрагмент текста пункта.
+# Ожидаемые метаданные и дерево положений документов компании из knowledge-base.zip.
+# Текста документов здесь нет: только шапка, адреса, заголовки разделов и короткие метки.
+# file — часть имени файла в архиве; header — метаданные из шапки;
+# clauses — число пунктов раздела; requisites — номер раздела реквизитов;
+# markers — фрагмент текста пункта. У документов без нумерации дерева пока нет.
 
 - file: "Договор аренды А-08-2024 Северный Склад"
+  header:
+    kind: contract
+    title: "Договор аренды нежилого помещения № А-08/2024"
+    number: "А-08/2024"
+    dated: 2024-08-01
+    parties:
+      - {name: "ООО «Северный Склад»", taxpayer_number: "5047112233", role: "Арендодатель"}
+      - {name: "ООО «Меридиан»", taxpayer_number: "7709876543", role: "Арендатор"}
+    edition: null
+    effective_from: null
+    status: in_force
+    repealed_from: null
   preamble_lines: 5
   sections:
     - {number: "1", title: "Предмет договора", clauses: 3}
@@ -19,6 +32,18 @@
     "5.1": "0,1%"
 
 - file: "Договор поставки П-17-2024 Альфа-Трейд"
+  header:
+    kind: contract
+    title: "Договор поставки № П-17/2024"
+    number: "П-17/2024"
+    dated: 2024-02-12
+    parties:
+      - {name: "ООО «Альфа-Трейд»", taxpayer_number: "7701234567", role: "Поставщик"}
+      - {name: "ООО «Меридиан»", taxpayer_number: "7709876543", role: "Покупатель"}
+    edition: null
+    effective_from: null
+    status: in_force
+    repealed_from: null
   preamble_lines: 5
   sections:
     - {number: "1", title: "Предмет договора", clauses: 2}
@@ -37,6 +62,18 @@
     "7.5": "50% от общей цены договора"
 
 - file: "Договор поставки ПТ-05-2023 Альфа-Трейдинг"
+  header:
+    kind: contract
+    title: "Договор поставки № ПТ-05/2023"
+    number: "ПТ-05/2023"
+    dated: 2023-06-20
+    parties:
+      - {name: "ООО «Альфа-Трейдинг»", taxpayer_number: "7714567890", role: "Поставщик"}
+      - {name: "ООО «Меридиан»", taxpayer_number: "7709876543", role: "Покупатель"}
+    edition: null
+    effective_from: null
+    status: in_force
+    repealed_from: null
   preamble_lines: 5
   sections:
     - {number: "1", title: "Предмет договора", clauses: 2}
@@ -54,6 +91,16 @@
     "8.1": "автоматически продлевается"
 
 - file: "Регламент согласования договоров ред 2023"
+  header:
+    kind: regulation
+    title: "Регламент согласования договоров ООО «Меридиан»"
+    number: null
+    dated: 2023-01-10
+    parties: []
+    edition: 2023-01-10
+    effective_from: null
+    status: repealed
+    repealed_from: 2025-03-01
   preamble_lines: 4
   sections:
     - {number: "1", title: "Общие положения", clauses: 3}
@@ -66,6 +113,16 @@
     "2.4": "10 000 000 (десяти миллионов) рублей"
 
 - file: "Регламент согласования договоров ред 2025"
+  header:
+    kind: regulation
+    title: "Регламент согласования договоров ООО «Меридиан»"
+    number: null
+    dated: 2025-02-17
+    parties: []
+    edition: 2025-03-01
+    effective_from: 2025-03-01
+    status: in_force
+    repealed_from: null
   preamble_lines: 3
   sections:
     - {number: "1", title: "Общие положения", clauses: 4}
@@ -77,3 +134,41 @@
   markers:
     "2.4": "15 000 000 (пятнадцати миллионов) рублей"
     "5.4": "валютный контроль финансовым отделом"
+
+- file: "Доп соглашение 1 к договору П-17-2024"
+  header:
+    kind: supplementary_agreement
+    title: "Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г."
+    number: "1"
+    dated: 2024-09-03
+    parties:
+      - {name: "ООО «Альфа-Трейд»", taxpayer_number: null, role: "Поставщик"}
+      - {name: "ООО «Меридиан»", taxpayer_number: null, role: "Покупатель"}
+    edition: null
+    effective_from: null
+    status: in_force
+    repealed_from: null
+
+- file: "Письмо комплаенс-службы К-12"
+  header:
+    kind: letter
+    title: "Письмо № К-12 от 15.04.2025"
+    number: "К-12"
+    dated: 2025-04-15
+    parties: []
+    edition: null
+    effective_from: null
+    status: in_force
+    repealed_from: null
+
+- file: "Служебная записка об архиве договоров"
+  header:
+    kind: memo
+    title: "Служебная записка № ЮО-7 от 12.05.2025"
+    number: "ЮО-7"
+    dated: 2025-05-12
+    parties: []
+    edition: null
+    effective_from: null
+    status: in_force
+    repealed_from: null

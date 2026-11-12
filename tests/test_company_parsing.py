@@ -121,7 +121,7 @@ def test_no_line_of_source_text_is_lost() -> None:
 
 
 def test_bom_crlf_and_blank_lines_do_not_change_result() -> None:
-    noisy = "﻿" + STORAGE_CONTRACT.replace("\n", "\r\n\r\n")
+    noisy = "\ufeff" + STORAGE_CONTRACT.replace("\n", "\r\n\r\n")
     assert parse(noisy) == parse(STORAGE_CONTRACT)
 
 

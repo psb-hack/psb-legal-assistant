@@ -13,12 +13,12 @@ from lex_documents import (
     Provision,
 )
 from lex_numbering import split_numbered_line
+from lex_paragraphs import split_paragraphs
 
 # «7. Реквизиты и подписи сторон» — раздел в конце договора без нумерованных пунктов.
 _REQUISITES_TITLE = re.compile(r"реквизиты|подписи", re.IGNORECASE)
 # Положение заканчивается знаком препинания, заголовок раздела — нет.
 _SENTENCE_ENDINGS = (".", ":", ";")
-_BYTE_ORDER_MARK = "﻿"
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,10 +70,7 @@ def parse(text: str) -> ParsedDocument:
 def _split_into_blocks(text: str) -> tuple[list[str], list[_NumberedBlock]]:
     preamble: list[str] = []
     blocks: list[_NumberedBlock] = []
-    for raw in text.removeprefix(_BYTE_ORDER_MARK).splitlines():
-        line = raw.strip()
-        if not line:
-            continue
+    for line in split_paragraphs(text):
         numbered = split_numbered_line(line)
         if numbered is not None:
             blocks.append(_NumberedBlock(numbered.number, numbered.text, ()))
