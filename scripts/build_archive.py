@@ -20,6 +20,7 @@ SRC_MODULES = (
     "lex_declension.py",
     "lex_dense_retrieval.py",
     "lex_detection.py",
+    "lex_dialogue.py",
     "lex_document_graph.py",
     "lex_document_header.py",
     "lex_document_links.py",
