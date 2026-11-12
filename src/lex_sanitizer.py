@@ -164,6 +164,18 @@ def admit(
     )
 
 
+def admitted_provisions(
+    base: KnowledgeBase, screening: Screening
+) -> tuple[AdmittedProvision, ...]:
+    """Всё, что из базы можно искать и показывать модели, в порядке документов."""
+    admitted = (
+        admit(document, provision, screening)
+        for document in base.documents
+        for provision in document.provisions
+    )
+    return tuple(item for item in admitted if item is not None)
+
+
 def visible_fragments(document: Document) -> tuple[Fragment, ...]:
     fragments: list[Fragment] = []
     signed = False

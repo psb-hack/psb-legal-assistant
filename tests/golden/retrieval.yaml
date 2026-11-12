@@ -1,0 +1,251 @@
+# Поиск на настоящей базе по golden-набору (eval/cases.yaml): запрос — вопрос кейса
+# целиком, выдача — все положения с ненулевой оценкой.
+# any_source — кейсы, где в первых k положениях есть хотя бы один источник;
+# all_sources — кейсы, где в первых k положениях есть все источники. Источник без
+# пункта или части (документ, статья закона целиком) закрывает любое его положение.
+# ranks: first — место первого найденного источника, all — место, к которому
+# найдены все; null — в выдаче нет.
+# Файл фиксирует состояние, а не цель: изменились цифры — смотрим, какие кейсы
+# сдвинулись, и обновляем файл вместе с объяснением в PR.
+
+bm25:
+  cases:
+    evaluated: 36
+    without_sources:
+    - demo-03
+    - team-13
+    - team-19
+    unresolved_sources: {}
+  overall:
+    cases: 36
+    any_source:
+      5: 30
+      10: 31
+      20: 32
+    all_sources:
+      5: 21
+      10: 26
+      20: 30
+  mrr: 0.697
+  by_scenario:
+    ambiguous:
+      cases: 1
+      any_source:
+        5: 1
+        10: 1
+        20: 1
+      all_sources:
+        5: 1
+        10: 1
+        20: 1
+    dialog:
+      cases: 6
+      any_source:
+        5: 6
+        10: 6
+        20: 6
+      all_sources:
+        5: 4
+        10: 5
+        20: 5
+    direct:
+      cases: 13
+      any_source:
+        5: 11
+        10: 11
+        20: 11
+      all_sources:
+        5: 8
+        10: 10
+        20: 10
+    edition:
+      cases: 5
+      any_source:
+        5: 4
+        10: 4
+        20: 4
+      all_sources:
+        5: 2
+        10: 3
+        20: 4
+    false_premise:
+      cases: 2
+      any_source:
+        5: 2
+        10: 2
+        20: 2
+      all_sources:
+        5: 2
+        10: 2
+        20: 2
+    illegal:
+      cases: 2
+      any_source:
+        5: 1
+        10: 1
+        20: 2
+      all_sources:
+        5: 1
+        10: 1
+        20: 2
+    injection:
+      cases: 3
+      any_source:
+        5: 1
+        10: 2
+        20: 2
+      all_sources:
+        5: 0
+        10: 1
+        20: 2
+    insufficient:
+      cases: 1
+      any_source:
+        5: 1
+        10: 1
+        20: 1
+      all_sources:
+        5: 1
+        10: 1
+        20: 1
+    role_attack:
+      cases: 3
+      any_source:
+        5: 3
+        10: 3
+        20: 3
+      all_sources:
+        5: 2
+        10: 2
+        20: 3
+  by_origin:
+    demo:
+      cases: 17
+      any_source:
+        5: 16
+        10: 16
+        20: 16
+      all_sources:
+        5: 13
+        10: 15
+        20: 15
+    team:
+      cases: 19
+      any_source:
+        5: 14
+        10: 15
+        20: 16
+      all_sources:
+        5: 8
+        10: 11
+        20: 15
+  ranks:
+    demo-01:
+      first: 1
+      all: 6
+    demo-02:
+      first: 1
+      all: 1
+    demo-04:
+      first: 1
+      all: 4
+    demo-05:
+      first: 1
+      all: 2
+    demo-06:
+      first: 4
+      all: 38
+    demo-07:
+      first: 22
+      all: 22
+    demo-08:
+      first: 1
+      all: 1
+    demo-09:
+      first: 3
+      all: 8
+    demo-10:
+      first: 2
+      all: 2
+    demo-11:
+      first: 1
+      all: 1
+    demo-12:
+      first: 1
+      all: 1
+    demo-13:
+      first: 1
+      all: 1
+    demo-14:
+      first: 1
+      all: 1
+    demo-15:
+      first: 3
+      all: 3
+    demo-16:
+      first: 2
+      all: 2
+    demo-17:
+      first: 1
+      all: 1
+    demo-18:
+      first: 2
+      all: 2
+    team-01:
+      first: 30
+      all: 30
+    team-02:
+      first: 2
+      all: 10
+    team-03:
+      first: 8
+      all: 16
+    team-04:
+      first: 1
+      all: 1
+    team-05:
+      first: 1
+      all: 5
+    team-06:
+      first: 1
+      all: 18
+    team-07:
+      first: 1
+      all: 17
+    team-08:
+      first: 1
+      all: 7
+    team-09:
+      first: 3
+      all: 4
+    team-10:
+      first: 21
+      all: 21
+    team-11:
+      first: 1
+      all: 1
+    team-12:
+      first: 20
+      all: 20
+    team-14:
+      first: 1
+      all: 4
+    team-15:
+      first: 21
+      all: 21
+    team-16:
+      first: 2
+      all: 2
+    team-17:
+      first: 1
+      all: 1
+    team-18:
+      first: 1
+      all: 92
+    team-20:
+      first: 1
+      all: 10
+    team-21:
+      first: 1
+      all: 1
+
