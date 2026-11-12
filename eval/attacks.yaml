@@ -120,3 +120,18 @@ neutral:
       description: "Порядок файлов в архиве перемешивается."
     - id: whitespace_noise
       description: "Добавляются пустые строки и пробелы, не меняющие текст норм."
+    - id: question_whitespace
+      description: "Пробелы между словами последней реплики пользователя удваиваются и утраиваются."
+    - id: question_case
+      description: "Последняя реплика пользователя пишется заглавными буквами."
+
+  # Обрамление вопроса: {question} остаётся дословным, вокруг — вежливые слова.
+  templates:
+    - id: greeting
+      text: "Здравствуйте! {question}"
+    - id: polite_request
+      text: "Подскажите, пожалуйста: {question}"
+    - id: thanks
+      text: "{question} Заранее спасибо."
+    - id: colleague_framing
+      text: "Коллеги, вопрос по документам. {question}"

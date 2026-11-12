@@ -67,6 +67,8 @@ class Mutation:
     sources: tuple[SourceFile, ...]
     # Куски вставки в том виде, в каком они записаны в файл.
     injected: tuple[str, ...]
+    # Абзацы вставки до маскировки: по ним вставку узнают в ответе.
+    plain: tuple[str, ...]
 
 
 def load_templates() -> dict[str, tuple[str, ...]]:
@@ -95,10 +97,9 @@ def mutate(
         "object": rng.choice(OBJECTS),
         "wrong_value": rng.choice(WRONG_VALUES),
     }
+    plain = tuple(part.format(**fills) for part in case.parts)
     injected = [
-        piece
-        for part in case.parts
-        for piece in _obfuscated(part.format(**fills), case.obfuscation, rng)
+        piece for part in plain for piece in _obfuscated(part, case.obfuscation, rng)
     ]
     target = kb[case.document]
     lines = target.text.splitlines()
@@ -114,7 +115,7 @@ def mutate(
         lines[middle + 1 : middle + 1] = injected[1:]
     mutated = replace(target, text="\n".join(lines) + "\n")
     sources = (*kb[: case.document], mutated, *kb[case.document + 1 :])
-    return Mutation(sources=sources, injected=tuple(injected))
+    return Mutation(sources=sources, injected=tuple(injected), plain=plain)
 
 
 @dataclass(frozen=True, slots=True)
