@@ -419,7 +419,30 @@ def test_rejected_missing_line_is_removed_and_claims_stay() -> None:
     answer = _answer([CONFIRMED_CLAIM], ["штрафе 50 000 рублей", "пособиях"])
     cleaned, worthwhile = _corrected(answer)
     assert (cleaned.claims, cleaned.missing) == (answer.claims, ("пособиях",))
-    assert worthwhile
+    # Строку дешевле удалить, чем тратить на неё вызов модели.
+    assert not worthwhile
+
+
+def test_regeneration_is_pointless_for_claim_repeating_quarantine() -> None:
+    answer = _answer(
+        [CONFIRMED_CLAIM, ("Оплата — через 77 календарных дней.", PAYMENT)]
+    )
+    cleaned, worthwhile = _corrected(answer)
+    assert cleaned.claims == answer.claims[:1]
+    assert not worthwhile
+
+
+def test_claim_rejected_by_cited_provision_is_repairable() -> None:
+    report = _verify(
+        _answer(
+            [
+                CONFIRMED_CLAIM,
+                REJECTED_CLAIM,
+                ("Оплата — через 77 календарных дней.", PAYMENT),
+            ]
+        )
+    )
+    assert [check.repairable for check in report.claims] == [False, True, False]
 
 
 def test_report_of_another_answer_is_refused() -> None:

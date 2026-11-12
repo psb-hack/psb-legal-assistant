@@ -15,9 +15,17 @@ from typing import Any
 
 import yaml
 
+from lex_document_graph import DocumentGraph, build_graph
 from lex_documents import ProvisionId, cite
 from lex_knowledge_base import KnowledgeBase, load_knowledge_base
-from lex_sanitizer import AdmittedProvision
+from lex_sanitizer import (
+    AdmittedProvision,
+    Screening,
+    admit,
+    default_detectors,
+    screen,
+)
+from lex_settings import SanitizerThresholds
 
 REPO = Path(__file__).resolve().parents[1]
 ARCHIVE = REPO / "data" / "knowledge-base.zip"
@@ -30,6 +38,17 @@ CASES: list[dict[str, Any]] = yaml.safe_load(_GOLDEN.read_text(encoding="utf-8")
 @functools.cache
 def base() -> KnowledgeBase:
     return load_knowledge_base(ARCHIVE)
+
+
+@functools.cache
+def screening() -> Screening:
+    thresholds = SanitizerThresholds()
+    return screen(base(), default_detectors(thresholds), thresholds)
+
+
+@functools.cache
+def graph() -> DocumentGraph:
+    return build_graph(base())
 
 
 @functools.cache
@@ -55,6 +74,18 @@ def context(ids: Sequence[ProvisionId]) -> list[AdmittedProvision]:
         if document.id in cited_documents
         for provision in document.provisions
     ]
+
+
+def admitted_context(ids: Sequence[ProvisionId]) -> list[AdmittedProvision]:
+    """То же, но после санитайзера: карантинные абзацы в контекст не входят."""
+    cited_documents = {one.split(".")[0] for one in ids}
+    admitted = (
+        admit(document, provision, screening())
+        for document in base().documents
+        if document.id in cited_documents
+        for provision in document.provisions
+    )
+    return [provision for provision in admitted if provision is not None]
 
 
 def model_reply(case: dict[str, Any]) -> tuple[str, list[ProvisionId]]:

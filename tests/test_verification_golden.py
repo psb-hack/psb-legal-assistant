@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import functools
 from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
@@ -14,20 +13,19 @@ from typing import Any
 import pytest
 import yaml
 
-from demo_answers import ARCHIVE, CASES, base, model_reply, questions
+from demo_answers import (
+    ARCHIVE,
+    CASES,
+    admitted_context,
+    graph,
+    model_reply,
+    questions,
+    screening,
+)
 from lex_answer_contract import GroundedAnswer, GroundedClaim, read_reply
-from lex_document_graph import DocumentGraph, build_graph
-from lex_documents import ProvisionId
 from lex_models import FinishReason, JsonCompletion
 from lex_prompt_boundary import Boundary
-from lex_sanitizer import (
-    AdmittedProvision,
-    Screening,
-    admit,
-    default_detectors,
-    screen,
-)
-from lex_settings import SanitizerThresholds
+from lex_sanitizer import AdmittedProvision
 from lex_verification import VerificationReport, ViolationKind, verify
 
 GOLDEN: dict[str, Any] = yaml.safe_load(
@@ -43,32 +41,9 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@functools.cache
-def _screening() -> Screening:
-    thresholds = SanitizerThresholds()
-    return screen(base(), default_detectors(thresholds), thresholds)
-
-
-@functools.cache
-def _graph() -> DocumentGraph:
-    return build_graph(base())
-
-
-def _context(ids: Sequence[ProvisionId]) -> list[AdmittedProvision]:
-    """Допущенные положения документов, на которые ссылается ответ."""
-    cited = {one.split(".")[0] for one in ids}
-    admitted = (
-        admit(document, provision, _screening())
-        for document in base().documents
-        if document.id in cited
-        for provision in document.provisions
-    )
-    return [provision for provision in admitted if provision is not None]
-
-
 def _demo(demo: str) -> tuple[GroundedAnswer, list[AdmittedProvision]]:
     reply, ids = model_reply(CASES_BY_DEMO[demo])
-    context = _context(ids)
+    context = admitted_context(ids)
     reading = read_reply(JsonCompletion(reply, FinishReason.STOP), context, BOUNDARY)
     assert reading.grounded is not None
     assert reading.problems == ()
@@ -78,7 +53,7 @@ def _demo(demo: str) -> tuple[GroundedAnswer, list[AdmittedProvision]]:
 def _verify(
     demo: str, answer: GroundedAnswer, context: Sequence[AdmittedProvision]
 ) -> VerificationReport:
-    return verify(answer, context, questions()[demo], _screening(), _graph())
+    return verify(answer, context, questions()[demo], screening(), graph())
 
 
 def test_correct_demo_answers_have_no_rejected_claims() -> None:
