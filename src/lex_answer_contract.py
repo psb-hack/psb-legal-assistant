@@ -84,6 +84,19 @@ class GroundedAnswer:
 # Ответ, когда из ответа модели взять нечего: рендерер даёт по нему отказ.
 NO_DATA_ANSWER = GroundedAnswer(Scenario.INSUFFICIENT, (), (), AnswerVerdict.NONE)
 
+
+@dataclass(frozen=True, slots=True)
+class UnconfirmedAnswer:
+    """Положения по вопросу есть, но ни одно утверждение о них не подтверждено.
+
+    Не отказ: документ найден, и рендерер называет его ссылкой. Утверждений
+    здесь нет — их снял верификатор.
+    """
+
+    # Положения, на которые опирались снятые утверждения; не пусто.
+    provisions: tuple[ProvisionId, ...]
+
+
 # Текст этих ответов даёт шаблон рендерера: пустой ответ модели здесь законен.
 SCENARIOS_ANSWERED_BY_TEMPLATE = frozenset({Scenario.OFF_TOPIC, Scenario.ROLE_ATTACK})
 
@@ -163,14 +176,29 @@ def generate(
     После повтора утверждения, не прошедшие сверку, отбрасываются. Если брать
     нечего, результат — NO_DATA_ANSWER.
     """
-    first = _ask(model, turns, provisions, boundary)
+    first = ask(model, turns, provisions, boundary)
     if not first.problems or _retry_is_pointless(first.problems):
         return Generation(first.grounded or NO_DATA_ANSWER, False, first.problems)
     corrected = correction_request(turns, first.problems, provisions)
-    second = _ask(model, corrected, provisions, boundary)
+    second = ask(model, corrected, provisions, boundary)
     # Неразобранный повтор не отменяет того, что прошло сверку в первом ответе.
     chosen = second if second.grounded is not None else first
     return Generation(chosen.grounded or NO_DATA_ANSWER, True, chosen.problems)
+
+
+def ask(
+    model: JsonChatModel,
+    turns: Sequence[ChatTurn],
+    provisions: Sequence[AdmittedProvision],
+    boundary: Boundary,
+) -> ReplyReading:
+    """Один вызов модели без повтора; сбой прокси — причина, а не исключение."""
+    try:
+        completion = model.complete_json(turns)
+    except ModelGatewayError:
+        # Клиент прокси уже повторял запрос сам.
+        return _unreadable(ProblemKind.NO_REPLY)
+    return read_reply(completion, provisions, boundary)
 
 
 def read_reply(
@@ -215,20 +243,6 @@ def correction_request(
     *before, last = turns
     correction = ANSWER_CORRECTION_V1.format(problems=lines)
     return [*before, ChatTurn(last.role, f"{last.content}\n{correction}")]
-
-
-def _ask(
-    model: JsonChatModel,
-    turns: Sequence[ChatTurn],
-    provisions: Sequence[AdmittedProvision],
-    boundary: Boundary,
-) -> ReplyReading:
-    try:
-        completion = model.complete_json(turns)
-    except ModelGatewayError:
-        # Клиент прокси уже повторял запрос сам.
-        return _unreadable(ProblemKind.NO_REPLY)
-    return read_reply(completion, provisions, boundary)
 
 
 def _retry_is_pointless(problems: Sequence[ReplyProblem]) -> bool:

@@ -13,15 +13,18 @@ from lex_answer_contract import (
     AnswerVerdict,
     GroundedAnswer,
     GroundedClaim,
+    UnconfirmedAnswer,
     generate,
 )
 from lex_answer_rendering import (
     CLARIFICATION_REQUEST,
     ILLEGAL_LEAD,
     MAX_ANSWER_WORDS,
+    MAX_UNCONFIRMED_SOURCES,
     OFF_TOPIC_REPLY,
     REFUSAL_NO_DATA,
     ROLE_REPLY,
+    UNCONFIRMED_IN_SOURCES,
     render,
 )
 from lex_documents import DocumentId, ProvisionId, cite
@@ -167,6 +170,29 @@ def test_refusal_names_missing_topic_and_declines_to_answer_from_memory() -> Non
 
 def test_safe_answer_is_a_refusal_without_topic() -> None:
     assert render(NO_DATA_ANSWER, BASE) == REFUSAL_NO_DATA
+
+
+def test_unconfirmed_answer_names_document_and_states_no_value() -> None:
+    answer = UnconfirmedAnswer((ProvisionId(PAYMENT), ProvisionId(RESPONSE)))
+    assert render(answer, BASE) == (
+        f"Положения по этому вопросу в базе знаний есть: {CONTRACT_TITLE}, "
+        "п. 2.2, п. 3.2. Подтвердить ответ по их тексту не удалось, поэтому "
+        "я его не привожу."
+    )
+
+
+def test_unconfirmed_answer_cites_only_first_provisions() -> None:
+    cited = (PRICE, PAYMENT, RESPONSE, SCHEDULE, LEAVE_PAY)
+    text = render(UnconfirmedAnswer(tuple(ProvisionId(one) for one in cited)), BASE)
+    assert len(cited) > MAX_UNCONFIRMED_SOURCES
+    assert "п. 3.2" in text
+    assert MEMO_TITLE not in text
+    assert "ТК РФ" not in text
+
+
+def test_unconfirmed_template_states_no_value_and_no_absence_of_documents() -> None:
+    assert not any(character.isdigit() for character in UNCONFIRMED_IN_SOURCES)
+    assert "нет документов" not in UNCONFIRMED_IN_SOURCES
 
 
 def test_partial_answer_ends_with_what_is_missing() -> None:

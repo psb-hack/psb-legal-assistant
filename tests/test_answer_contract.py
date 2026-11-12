@@ -21,7 +21,7 @@ from lex_answer_contract import (
 )
 from lex_documents import ProvisionId
 from lex_errors import ModelGatewayError
-from lex_models import ChatTurn, FinishReason, JsonCompletion
+from lex_models import FinishReason, JsonCompletion
 from lex_prompt_boundary import (
     Boundary,
     PromptRules,
@@ -30,6 +30,7 @@ from lex_prompt_boundary import (
 )
 from lex_sanitizer import AdmittedProvision
 from lex_scenarios import Scenario
+from scripted_model import ScriptedJsonModel
 
 MARK = "9f2c4e6a8b0d1f35"
 BOUNDARY = Boundary(MARK)
@@ -90,21 +91,6 @@ def _reply(
 
 def _stop(content: str) -> JsonCompletion:
     return JsonCompletion(content=content, finish=FinishReason.STOP)
-
-
-class ScriptedJsonModel:
-    """Отвечает заготовленными ответами по очереди и запоминает запросы."""
-
-    def __init__(self, *replies: str | JsonCompletion | Exception) -> None:
-        self._replies = list(replies)
-        self.requests: list[tuple[ChatTurn, ...]] = []
-
-    def complete_json(self, turns: Sequence[ChatTurn]) -> JsonCompletion:
-        self.requests.append(tuple(turns))
-        reply = self._replies.pop(0)
-        if isinstance(reply, Exception):
-            raise reply
-        return _stop(reply) if isinstance(reply, str) else reply
 
 
 def _generate(model: ScriptedJsonModel):
