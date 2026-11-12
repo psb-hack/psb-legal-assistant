@@ -64,7 +64,7 @@ def _numbered_clauses(paragraphs: Sequence[str]) -> list[Provision]:
         )
         for position, line in enumerate(preamble, start=1)
     ]
-    ancestors: list[Heading] = []
+    ancestors: list[_NumberedBlock] = []
     for index, block in enumerate(blocks):
         while ancestors and not ancestors[-1].number.is_ancestor_of(block.number):
             ancestors.pop()
@@ -79,12 +79,15 @@ def _numbered_clauses(paragraphs: Sequence[str]) -> list[Provision]:
                     position=len(provisions) + 1,
                     part=_part_of(block, has_subclauses),
                     number=block.number,
-                    headings=tuple(ancestors),
+                    headings=tuple(
+                        Heading(ancestor.number, ancestor.title)
+                        for ancestor in ancestors
+                    ),
                     text=block.text,
                 )
             )
         if has_subclauses:
-            ancestors.append(Heading(number=block.number, title=block.title))
+            ancestors.append(block)
     return provisions
 
 
