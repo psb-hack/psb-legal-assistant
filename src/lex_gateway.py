@@ -10,7 +10,13 @@ from typing import Any, TypeVar
 import httpx
 
 from lex_errors import ModelGatewayError
-from lex_models import ChatResult, ChatTurn, RankedDocument
+from lex_models import (
+    ChatResult,
+    ChatTurn,
+    FinishReason,
+    JsonCompletion,
+    RankedDocument,
+)
 from lex_retry import (
     RETRY_STATUSES,
     Clock,
@@ -29,6 +35,9 @@ T = TypeVar("T")
 CONNECT_TIMEOUT = 5.0
 READ_TIMEOUT = 90.0
 THINKING_DISABLED: dict[str, Any] = {"type": "disabled"}
+JSON_OBJECT_FORMAT: dict[str, Any] = {"type": "json_object"}
+# Сбой на стороне провайдера, а не свойство запроса: тот же запрос стоит повторить.
+_TRANSIENT_FINISH_REASONS = frozenset({"insufficient_system_resource", "aborted"})
 
 
 class ProxyGateway:
@@ -68,30 +77,44 @@ class ProxyGateway:
             self._client.close()
 
     def complete(self, turns: Sequence[ChatTurn]) -> ChatResult:
-        payload = {
+        payload = self._chat_payload(turns)
+
+        def parse() -> ChatResult:
+            content, finish = _first_choice(self._send("/chat/completions", payload))
+            if finish == FinishReason.LENGTH.value or not content.strip():
+                raise _UnusableCompletionError(
+                    f"пустой content или обрезка (finish_reason={finish!r})"
+                )
+            return ChatResult(content=content, finish_reason=finish)
+
+        return self._call(parse)
+
+    def complete_json(self, turns: Sequence[ChatTurn]) -> JsonCompletion:
+        """Ответ в JSON-режиме вместе с причиной завершения.
+
+        Пустой и оборванный ответ здесь не повторяются: при нулевой температуре
+        тот же запрос даст тот же результат, менять запрос — дело вызывающего.
+        """
+        payload = {**self._chat_payload(turns), "response_format": JSON_OBJECT_FORMAT}
+
+        def parse() -> JsonCompletion:
+            content, finish = _first_choice(self._send("/chat/completions", payload))
+            if finish in _TRANSIENT_FINISH_REASONS:
+                raise _UnusableCompletionError(
+                    f"генерация прервана (finish_reason={finish!r})"
+                )
+            return JsonCompletion(content=content, finish=_finish_reason(finish))
+
+        return self._call(parse)
+
+    def _chat_payload(self, turns: Sequence[ChatTurn]) -> dict[str, Any]:
+        return {
             "model": self._settings.llm_model,
             "messages": [{"role": t.role, "content": t.content} for t in turns],
             "max_tokens": self._settings.max_tokens,
             "temperature": self._settings.temperature,
             "thinking": THINKING_DISABLED,
         }
-
-        def parse() -> ChatResult:
-            data = self._send("/chat/completions", payload)
-            try:
-                choice = data["choices"][0]
-                message = choice["message"]
-                content = message.get("content") or ""
-                finish = str(choice.get("finish_reason") or "")
-            except (KeyError, IndexError, TypeError) as exc:
-                raise ModelGatewayError("некорректный ответ chat/completions") from exc
-            if finish == "length" or not str(content).strip():
-                raise ModelGatewayError(
-                    f"пустой content или обрезка (finish_reason={finish!r})"
-                )
-            return ChatResult(content=str(content), finish_reason=finish)
-
-        return self._call(parse)
 
     def embed(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]:
         if not texts:
@@ -173,6 +196,10 @@ class ProxyGateway:
         return data
 
 
+class _UnusableCompletionError(ModelGatewayError):
+    """Ответ пришёл, но пользоваться им нельзя; повтор того же запроса уместен."""
+
+
 class _RetryableHttpError(Exception):
     def __init__(self, status: int, retry_after: float | None) -> None:
         super().__init__(status)
@@ -183,13 +210,31 @@ class _RetryableHttpError(Exception):
 def _should_retry(exc: Exception) -> tuple[bool, float | None]:
     if isinstance(exc, _RetryableHttpError):
         return True, exc.retry_after
+    if isinstance(exc, _UnusableCompletionError):
+        return True, None
     if isinstance(exc, ModelGatewayError):
         cause = exc.__cause__
         if isinstance(cause, (httpx.TimeoutException, httpx.RequestError)):
             return True, None
-        if "пустой content" in str(exc) or "обрезка" in str(exc):
-            return True, None
     return False, None
+
+
+def _first_choice(data: dict[str, Any]) -> tuple[str, str]:
+    """Текст и причина завершения первого варианта ответа chat/completions."""
+    try:
+        choice = data["choices"][0]
+        content = choice["message"].get("content") or ""
+        finish = choice.get("finish_reason") or ""
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
+        raise ModelGatewayError("некорректный ответ chat/completions") from exc
+    return str(content), str(finish)
+
+
+def _finish_reason(reported: str) -> FinishReason:
+    try:
+        return FinishReason(reported)
+    except ValueError:
+        return FinishReason.UNRECOGNIZED
 
 
 def _auth_headers(key: Secret) -> dict[str, str]:

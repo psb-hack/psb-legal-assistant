@@ -10,7 +10,7 @@ import pytest
 
 from lex_errors import ModelGatewayError
 from lex_gateway import ProxyGateway
-from lex_models import ChatTurn
+from lex_models import ChatTurn, FinishReason
 from lex_retry import RetryPolicy, WallClock
 from lex_settings import Settings
 
@@ -94,6 +94,107 @@ def test_empty_content_retries_then_fails() -> None:
         gateway.complete([ChatTurn(role="user", content="?")])
     assert hits["n"] == 4
     assert sleeper.delays
+
+
+def _chat_reply(content: object, finish_reason: object) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "choices": [
+                {"message": {"content": content}, "finish_reason": finish_reason}
+            ]
+        },
+    )
+
+
+def test_json_mode_is_requested_only_by_complete_json() -> None:
+    bodies: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content.decode()))
+        return _chat_reply('{"a": 1}', "stop")
+
+    gateway = _gateway(handler)
+    gateway.complete([ChatTurn(role="user", content="?")])
+    result = gateway.complete_json([ChatTurn(role="user", content="json?")])
+    assert "response_format" not in bodies[0]
+    assert bodies[1]["response_format"] == {"type": "json_object"}
+    assert bodies[1]["thinking"] == {"type": "disabled"}
+    assert result.content == '{"a": 1}'
+    assert result.finish is FinishReason.STOP
+
+
+@pytest.mark.parametrize(
+    ("content", "reported", "finish"),
+    [
+        ("   ", "stop", FinishReason.STOP),
+        (None, "stop", FinishReason.STOP),
+        ('{"claims": [', "length", FinishReason.LENGTH),
+        ("", "content_filter", FinishReason.CONTENT_FILTER),
+        ("{}", "tool_calls", FinishReason.UNRECOGNIZED),
+        ("{}", None, FinishReason.UNRECOGNIZED),
+    ],
+)
+def test_complete_json_reports_finish_reason_without_retrying(
+    content: str | None, reported: str | None, finish: FinishReason
+) -> None:
+    hits = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        hits["n"] += 1
+        return _chat_reply(content, reported)
+
+    result = _gateway(handler).complete_json([ChatTurn(role="user", content="?")])
+    assert result.finish is finish
+    assert result.content == (content or "")
+    assert hits["n"] == 1
+
+
+@pytest.mark.parametrize("reported", ["insufficient_system_resource", "aborted"])
+def test_complete_json_repeats_request_interrupted_by_provider(reported: str) -> None:
+    hits = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        hits["n"] += 1
+        if hits["n"] == 1:
+            return _chat_reply("", reported)
+        return _chat_reply("{}", "stop")
+
+    result = _gateway(handler).complete_json([ChatTurn(role="user", content="?")])
+    assert result.content == "{}"
+    assert hits["n"] == 2
+
+
+def test_complete_json_gives_up_when_provider_keeps_interrupting() -> None:
+    hits = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        hits["n"] += 1
+        return _chat_reply("", "aborted")
+
+    with pytest.raises(ModelGatewayError, match="прервана"):
+        _gateway(handler).complete_json([ChatTurn(role="user", content="?")])
+    assert hits["n"] == 4
+
+
+def test_complete_json_rejects_reply_without_choices() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": []})
+
+    with pytest.raises(ModelGatewayError, match="некорректный ответ"):
+        _gateway(handler).complete_json([ChatTurn(role="user", content="?")])
+
+
+def test_error_message_does_not_repeat_key_or_response_body() -> None:
+    key = _settings().llm_api_key.get()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": f"invalid api key {key}"})
+
+    with pytest.raises(ModelGatewayError) as raised:
+        _gateway(handler).complete_json([ChatTurn(role="user", content="?")])
+    assert str(raised.value) == "прокси HTTP 401"
+    assert key not in repr(raised.value)
 
 
 def test_retry_after_429() -> None:
