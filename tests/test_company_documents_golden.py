@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import unicodedata
-import zipfile
+import functools
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -11,43 +10,38 @@ from typing import Any
 import pytest
 import yaml
 
-from lex_company_parsing import parse
-from lex_document_header import read_header
 from lex_documents import (
+    Document,
     DocumentHeader,
+    DocumentId,
     DocumentKind,
     DocumentPart,
     DocumentStatus,
-    ParsedDocument,
     Party,
+    cite,
 )
+from lex_knowledge_base import SourceFile, company_document, read_archive
 
 REPO = Path(__file__).resolve().parents[1]
 ARCHIVE = REPO / "data" / "knowledge-base.zip"
 GOLDEN = Path(__file__).resolve().parent / "golden" / "company_documents.yaml"
 EXPECTED = yaml.safe_load(GOLDEN.read_text(encoding="utf-8"))
+WITH_SECTIONS = [item for item in EXPECTED if "sections" in item]
 
 pytestmark = pytest.mark.skipif(
     not ARCHIVE.is_file(), reason="нет data/knowledge-base.zip"
 )
 
 
-WITH_TREE = [item for item in EXPECTED if "sections" in item]
+@functools.cache
+def _sources() -> tuple[SourceFile, ...]:
+    return read_archive(ARCHIVE)
 
 
-def _text(file_marker: str) -> str:
-    with zipfile.ZipFile(ARCHIVE) as archive:
-        names = [
-            name
-            for name in archive.namelist()
-            if file_marker in unicodedata.normalize("NFC", name)
-        ]
-        assert len(names) == 1, names
-        return archive.read(names[0]).decode("utf-8-sig")
-
-
-def _parsed(file_marker: str) -> ParsedDocument:
-    return parse(_text(file_marker))
+def _document(file_marker: str) -> Document:
+    matching = [source for source in _sources() if file_marker in source.name]
+    assert len(matching) == 1, [source.name for source in matching]
+    return company_document(DocumentId("d01"), matching[0])
 
 
 def _expected_header(header: dict[str, Any]) -> DocumentHeader:
@@ -66,20 +60,33 @@ def _expected_header(header: dict[str, Any]) -> DocumentHeader:
 
 @pytest.mark.parametrize("expected", EXPECTED, ids=lambda item: item["file"])
 def test_document_header_matches_golden(expected: dict[str, Any]) -> None:
-    header = read_header(_text(expected["file"]))
-    assert header == _expected_header(expected["header"])
+    document = _document(expected["file"])
+    assert document.header == _expected_header(expected["header"])
 
 
-@pytest.mark.parametrize("expected", WITH_TREE, ids=lambda item: item["file"])
-def test_document_tree_matches_golden(expected: dict[str, Any]) -> None:
-    document = _parsed(expected["file"])
-    body = [item for item in document.provisions if item.part is DocumentPart.BODY]
+@pytest.mark.parametrize("expected", EXPECTED, ids=lambda item: item["file"])
+def test_provisions_match_golden(expected: dict[str, Any]) -> None:
+    document = _document(expected["file"])
+    assert len(document.provisions) == expected["provisions"]
 
     preamble = [
         item for item in document.provisions if item.part is DocumentPart.PREAMBLE
     ]
     assert len(preamble) == expected["preamble_lines"]
 
+    addressed = {
+        item.label: item for item in document.provisions if item.number is not None
+    }
+    for label, marker in expected["markers"].items():
+        assert marker in addressed[label].text
+    for label, citation in expected["cites"].items():
+        assert cite(document, addressed[label]) == citation
+
+
+@pytest.mark.parametrize("expected", WITH_SECTIONS, ids=lambda item: item["file"])
+def test_sections_match_golden(expected: dict[str, Any]) -> None:
+    document = _document(expected["file"])
+    body = [item for item in document.provisions if item.part is DocumentPart.BODY]
     sections = Counter(
         (str(item.headings[0].number), item.headings[0].title) for item in body
     )
@@ -94,7 +101,3 @@ def test_document_tree_matches_golden(expected: dict[str, Any]) -> None:
         if item.part is DocumentPart.REQUISITES
     ]
     assert requisites == ([expected["requisites"]] if expected["requisites"] else [])
-
-    texts = {str(item.number): item.text for item in body}
-    for number, marker in expected["markers"].items():
-        assert marker in texts[number]

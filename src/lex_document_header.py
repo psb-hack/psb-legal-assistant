@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date
 
@@ -94,7 +94,7 @@ class _TitleLines:
 
 
 def read_header(text: str) -> DocumentHeader:
-    lines = _header_lines(text)
+    lines = header_lines(split_paragraphs(text))
     title = _find_title(lines)
     statements = [
         statement for line in lines for statement in _SENTENCE_BREAK.split(line)
@@ -115,10 +115,10 @@ def read_header(text: str) -> DocumentHeader:
     )
 
 
-def _header_lines(text: str) -> list[str]:
-    """Строки до первого нумерованного пункта или первого абзаца основного текста."""
+def header_lines(paragraphs: Sequence[str]) -> list[str]:
+    """Абзацы до первого нумерованного пункта или первого абзаца основного текста."""
     lines: list[str] = []
-    for line in split_paragraphs(text):
+    for line in paragraphs:
         if split_numbered_line(line) is not None or _is_body_text(line):
             break
         lines.append(line)
