@@ -1,4 +1,4 @@
-"""Чтение архива базы знаний и сборка документа компании из его текста."""
+"""Чтение архива базы знаний и сборка документов из текстов его файлов."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ from pathlib import Path, PurePosixPath
 
 from lex_company_parsing import parse
 from lex_document_header import read_header
-from lex_documents import Document, DocumentId
+from lex_documents import Document, DocumentId, Provision, ProvisionId
 from lex_errors import KnowledgeBaseError
+from lex_law_lines import is_law_article
+from lex_law_parsing import parse_article
 
 _TEXT_SUFFIXES = (".txt", ".md")
 # Архиватор macOS кладёт рядом с файлами служебные копии: «__MACOSX/._договор.txt».
@@ -39,6 +41,43 @@ def read_archive(path: Path) -> tuple[SourceFile, ...]:
     if not files:
         raise KnowledgeBaseError(f"в архиве базы нет текстовых файлов: {path.name}")
     return tuple(sorted(files, key=lambda file: file.name))
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeBase:
+    documents: tuple[Document, ...]
+
+    def find(self, provision_id: ProvisionId) -> tuple[Document, Provision] | None:
+        """Положение и его документ; None — такого идентификатора в базе нет."""
+        for document in self.documents:
+            for provision in document.provisions:
+                if document.provision_id(provision) == provision_id:
+                    return document, provision
+        return None
+
+
+def load_knowledge_base(path: Path) -> KnowledgeBase:
+    """Документы архива с идентификаторами по порядку имён файлов: «d01», «d02»…"""
+    return KnowledgeBase(
+        tuple(
+            read_document(DocumentId(f"d{index:02d}"), source)
+            for index, source in enumerate(read_archive(path), start=1)
+        )
+    )
+
+
+def read_document(document_id: DocumentId, source: SourceFile) -> Document:
+    # Вид документа определяет текст, а не каталог или имя файла в архиве.
+    if is_law_article(source.text):
+        return law_article(document_id, source)
+    return company_document(document_id, source)
+
+
+def law_article(document_id: DocumentId, source: SourceFile) -> Document:
+    article = parse_article(source.text)
+    return Document(
+        id=document_id, header=article.header, provisions=article.provisions
+    )
 
 
 def company_document(document_id: DocumentId, source: SourceFile) -> Document:
