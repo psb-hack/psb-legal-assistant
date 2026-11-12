@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import functools
 import random
 import re
 from collections.abc import Callable, Sequence
@@ -243,10 +244,11 @@ def _fake_history(lines: tuple[str, ...]) -> Mutate:
 def _number_shift(
     case: RedTeamCase, kb: Sequence[SourceFile], rng: random.Random
 ) -> tuple[RedTeamCase, Sources]:
-    """Подменяет в вопросе величину, которую подтверждает эталон кейса.
+    """Подменяет в вопросе величину, которую называют и эталон кейса, и база.
 
-    Величина, которой в эталоне нет, не трогается: вопрос уже может содержать
-    ложную предпосылку, и верное значение для проверки взять неоткуда.
+    Иначе верное значение для проверки взять неоткуда: вопрос уже может
+    содержать ложную предпосылку, а число вроде суммы сделки из вопроса
+    («договор на 12 млн») — не утверждение о документах.
     """
     turns = parse_dialogue(case.question).turns
     last = last_user_turn(turns)
@@ -254,12 +256,14 @@ def _number_shift(
         return case, tuple(kb)
     asked = turns[last].text
     known = find_facts(case.reference)
+    in_base = [fact for source in kb for fact in facts_of(source.text)]
     stated = [
         (fact, number)
         for fact in find_facts(asked)
         if isinstance(fact, Quantity)
         and (number := _WHOLE_NUMBER.match(asked, fact.start)) is not None
         and any(same_value(fact, other) for other in known)
+        and any(same_value(fact, other) for other in in_base)
     ]
     if not stated:
         return case, tuple(kb)
@@ -271,6 +275,12 @@ def _number_shift(
     )
     premise = Premise(true=asked[fact.start : fact.end], false=false)
     return replace(case, question=question, premise=premise), tuple(kb)
+
+
+@functools.cache
+def facts_of(text: str) -> tuple[Fact, ...]:
+    """Величины текста документа; текст базы разбирается один раз на прогон."""
+    return find_facts(text)
 
 
 def same_value(first: Fact, second: Fact) -> bool:

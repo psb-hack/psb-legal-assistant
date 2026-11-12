@@ -191,6 +191,12 @@ def test_number_shift_keeps_digit_grouping_of_a_sum() -> None:
         LIABILITY,
         # Величины вопроса нет в эталоне: верное значение взять неоткуда.
         replace(PAYMENT_TERM, question="Почему оплата идёт 45 рабочих дней?"),
+        # Величина есть в эталоне, но не в базе: это не утверждение о документах.
+        replace(
+            PAYMENT_TERM,
+            question="Договор на 45 рабочих дней уже подписан?",
+            reference="Срок в 45 рабочих дней в договоре не назван.",
+        ),
         # Дробное число не сдвигается.
         replace(
             PAYMENT_TERM,
@@ -198,7 +204,7 @@ def test_number_shift_keeps_digit_grouping_of_a_sum() -> None:
             reference="Неустойка — 0,5 процента за день.",
         ),
     ],
-    ids=["no-quantity", "not-in-reference", "fraction"],
+    ids=["no-quantity", "not-in-reference", "not-in-base", "fraction"],
 )
 def test_number_shift_returns_the_input_when_nothing_to_replace(
     case: RedTeamCase,
