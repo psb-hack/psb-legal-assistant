@@ -9,12 +9,20 @@ from pathlib import Path, PurePosixPath
 
 from lex_company_parsing import parse
 from lex_document_header import read_header
-from lex_documents import Document, DocumentId, Provision, ProvisionId
+from lex_documents import (
+    Document,
+    DocumentId,
+    HiddenContent,
+    Provision,
+    ProvisionId,
+)
+from lex_docx_reading import read_docx
 from lex_errors import KnowledgeBaseError
 from lex_law_lines import is_law_article
 from lex_law_parsing import parse_article
 
 _TEXT_SUFFIXES = (".txt", ".md")
+_DOCX_SUFFIX = ".docx"
 # Архиватор macOS кладёт рядом с файлами служебные копии: «__MACOSX/._договор.txt».
 _MACOS_SERVICE_DIRECTORY = "__MACOSX/"
 _MACOS_SERVICE_COPY_PREFIX = "._"
@@ -25,21 +33,23 @@ _FALLBACK_ENCODING = "cp1251"
 class SourceFile:
     name: str
     text: str
+    # Скрытый текст, комментарии, колонтитулы и свойства DOCX.
+    hidden: tuple[HiddenContent, ...] = ()
 
 
 def read_archive(path: Path) -> tuple[SourceFile, ...]:
-    """Текстовые файлы архива в порядке имён."""
+    """Документы архива (TXT, MD, DOCX) в порядке имён."""
     try:
         with zipfile.ZipFile(path) as archive:
             files = [
-                SourceFile(_normalized(info.filename), _decoded(archive.read(info)))
+                _source_file(info.filename, archive.read(info))
                 for info in archive.infolist()
-                if _is_text_file(info)
+                if _is_document_file(info)
             ]
     except (OSError, zipfile.BadZipFile) as error:
         raise KnowledgeBaseError(f"архив базы не читается: {path.name}") from error
     if not files:
-        raise KnowledgeBaseError(f"в архиве базы нет текстовых файлов: {path.name}")
+        raise KnowledgeBaseError(f"в архиве базы нет документов: {path.name}")
     return tuple(sorted(files, key=lambda file: file.name))
 
 
@@ -76,7 +86,10 @@ def read_document(document_id: DocumentId, source: SourceFile) -> Document:
 def law_article(document_id: DocumentId, source: SourceFile) -> Document:
     article = parse_article(source.text)
     return Document(
-        id=document_id, header=article.header, provisions=article.provisions
+        id=document_id,
+        header=article.header,
+        provisions=article.provisions,
+        hidden=source.hidden,
     )
 
 
@@ -86,13 +99,24 @@ def company_document(document_id: DocumentId, source: SourceFile) -> Document:
         # В тексте нет шапки: называем документ по файлу, иначе на него не сослаться.
         header = replace(header, title=PurePosixPath(source.name).stem)
     return Document(
-        id=document_id, header=header, provisions=parse(source.text).provisions
+        id=document_id,
+        header=header,
+        provisions=parse(source.text).provisions,
+        hidden=source.hidden,
     )
 
 
-def _is_text_file(info: zipfile.ZipInfo) -> bool:
+def _source_file(archived_name: str, raw: bytes) -> SourceFile:
+    name = _normalized(archived_name)
+    if PurePosixPath(name).suffix.lower() == _DOCX_SUFFIX:
+        content = read_docx(name, raw)
+        return SourceFile(name, content.text, content.hidden)
+    return SourceFile(name, _decoded(raw))
+
+
+def _is_document_file(info: zipfile.ZipInfo) -> bool:
     name = PurePosixPath(info.filename)
-    if info.is_dir() or name.suffix.lower() not in _TEXT_SUFFIXES:
+    if info.is_dir() or name.suffix.lower() not in (*_TEXT_SUFFIXES, _DOCX_SUFFIX):
         return False
     is_service_copy = info.filename.startswith(
         _MACOS_SERVICE_DIRECTORY
