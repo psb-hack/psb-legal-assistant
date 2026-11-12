@@ -1,0 +1,195 @@
+# Маршрут по сущностям на настоящей базе (кейсы eval/cases.yaml), поиск — BM25,
+# запрос — search_query из диалога, today — день, от которого считается
+# действующая редакция.
+#
+# plans — планы кейсов, где диалог что-то назвал: документ, охват (whole —
+# целиком, relevant — найденные положения), причины. Остальным кейсам отвечает
+# один общий поиск.
+# demo_dialogues — причины маршрута у положения-источника каждого источника
+# кейса; пустой список — источник пришёл из общего поиска (демо 18).
+# missed_by_search — сколько источников кейса нет в контексте без маршрута; с
+# маршрутом в контексте все.
+# coverage — доля кейсов с источниками, у которых в контексте есть хотя бы один
+# источник (any_source) и все источники (all_sources): search_only — 10 лучших
+# положений общего поиска, with_route — маршрут и те же 10 положений без
+# повторов. missing_any — кейсы без единого источника в контексте, missing_some —
+# с частью источников. context — размер контекста по всем 39 кейсам: число
+# положений и знаков (заголовок и текст).
+# Файл фиксирует состояние, а не цель: изменились цифры — смотрим, какие кейсы
+# сдвинулись, и обновляем файл вместе с объяснением в PR.
+
+today: 2025-11-12
+document_lengths:
+  longest_company_document: 3703
+  law_articles: [1080, 84050]
+  long_law_articles: 5
+own_company: ООО «Меридиан»
+plans:
+  demo-01:
+    routes:
+    - [Договор аренды нежилого помещения № А-08/2024, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-04:
+    routes:
+    - [Договор аренды нежилого помещения № А-08/2024, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-06:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty, suggested_by_assistant]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-07:
+    routes:
+    - [Договор аренды нежилого помещения № А-08/2024, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-08:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-09:
+    routes:
+    - [Договор поставки № ПТ-05/2023, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-15:
+    routes:
+    - [Договор аренды нежилого помещения № А-08/2024, whole, counterparty, named_by_user]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-16:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty, named_by_user]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-17:
+    routes:
+    - [Договор поставки № ПТ-05/2023, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  demo-18:
+    routes: []
+    ambiguous: []
+    not_found: []
+    own_company: ООО «Меридиан»
+  team-01:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  team-02:
+    routes:
+    - [Договор поставки № ПТ-05/2023, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  team-05:
+    routes:
+    - [Договор аренды нежилого помещения № А-08/2024, whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  team-06:
+    routes:
+    - [Договор аренды нежилого помещения № А-08/2024, whole, counterparty, suggested_by_assistant]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  team-09:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  team-14:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    - [Договор поставки № ПТ-05/2023, whole, counterparty]
+    ambiguous: [Альфой]
+    not_found: []
+    own_company: null
+  team-18:
+    routes:
+    - [Договор поставки № П-17/2024, whole, named_by_user]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, linked]
+    ambiguous: []
+    not_found: []
+    own_company: null
+  team-20:
+    routes:
+    - [Договор поставки № П-17/2024, whole, counterparty, suggested_by_assistant]
+    - [Дополнительное соглашение № 1 к договору поставки № П-17/2024 от 12 февраля 2024 г., whole, counterparty]
+    ambiguous: []
+    not_found: []
+    own_company: null
+demo_dialogues:
+  demo-06:
+  - [counterparty, suggested_by_assistant]
+  - [counterparty, suggested_by_assistant]
+  demo-15:
+  - [counterparty, named_by_user]
+  demo-16:
+  - [counterparty, named_by_user]
+  demo-17:
+  - [counterparty]
+  demo-18:
+  - []
+agreement_required: 4
+missed_by_search: {demo-15: 0, team-06: 3, team-01: 1}
+regulation_editions: [2023-01-10, 2025-03-01]
+regulation_without_date: [Регламент согласования договоров ООО «Меридиан» в редакции от 01.03.2025, Письмо № К-12
+    от 15.04.2025]
+coverage:
+  search_only:
+    overall: {any_source: 30 из 36, all_sources: 26 из 36}
+    by_scenario:
+      ambiguous: {any_source: 1 из 1, all_sources: 1 из 1}
+      dialog: {any_source: 6 из 6, all_sources: 5 из 6}
+      direct: {any_source: 11 из 13, all_sources: 10 из 13}
+      edition: {any_source: 4 из 5, all_sources: 3 из 5}
+      false_premise: {any_source: 2 из 2, all_sources: 2 из 2}
+      illegal: {any_source: 1 из 2, all_sources: 1 из 2}
+      injection: {any_source: 2 из 3, all_sources: 1 из 3}
+      insufficient: {any_source: 1 из 1, all_sources: 1 из 1}
+      role_attack: {any_source: 2 из 3, all_sources: 2 из 3}
+    missing_any: [demo-07, team-01, team-06, team-10, team-12, team-15]
+    missing_some: [demo-06, team-03, team-07, team-18]
+    context:
+      provisions: {median: 10, max: 10}
+      characters: {median: 2613, max: 13206}
+  with_route:
+    overall: {any_source: 33 из 36, all_sources: 31 из 36}
+    by_scenario:
+      ambiguous: {any_source: 1 из 1, all_sources: 1 из 1}
+      dialog: {any_source: 6 из 6, all_sources: 6 из 6}
+      direct: {any_source: 12 из 13, all_sources: 12 из 13}
+      edition: {any_source: 4 из 5, all_sources: 3 из 5}
+      false_premise: {any_source: 2 из 2, all_sources: 2 из 2}
+      illegal: {any_source: 1 из 2, all_sources: 1 из 2}
+      injection: {any_source: 3 из 3, all_sources: 2 из 3}
+      insufficient: {any_source: 1 из 1, all_sources: 1 из 1}
+      role_attack: {any_source: 3 из 3, all_sources: 3 из 3}
+    missing_any: [team-10, team-12, team-15]
+    missing_some: [team-03, team-07]
+    context:
+      provisions: {median: 10, max: 62}
+      characters: {median: 5293, max: 16844}
