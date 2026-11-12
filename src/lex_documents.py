@@ -131,6 +131,21 @@ class ParsedDocument:
     provisions: tuple[Provision, ...]
 
 
+class HiddenContentKind(Enum):
+    """Что в файле есть, но читателю документа не показано."""
+
+    HIDDEN_TEXT = "hidden_text"
+    COMMENT = "comment"
+    HEADER_FOOTER = "header_footer"
+    PROPERTY = "property"
+
+
+@dataclass(frozen=True, slots=True)
+class HiddenContent:
+    kind: HiddenContentKind
+    text: str
+
+
 class DocumentKind(Enum):
     CONTRACT = "contract"
     SUPPLEMENTARY_AGREEMENT = "supplementary_agreement"
@@ -235,6 +250,8 @@ class Document:
     id: DocumentId
     header: DocumentHeader | LawArticleHeader
     provisions: tuple[Provision, ...]
+    # В положения не входит: это материал для санитайзера и журнала.
+    hidden: tuple[HiddenContent, ...] = ()
 
     def provision_id(self, provision: Provision) -> ProvisionId:
         return ProvisionId(f"{self.id}.{provision.position}")

@@ -64,7 +64,7 @@ def test_folders_service_copies_and_other_formats_are_skipped(tmp_path: Path) ->
             "__MACOSX/законы/._статья.txt": b"\x00\x05\x16\x07",
             "законы/._статья.txt": b"\x00\x05\x16\x07",
             "схема.png": b"\x89PNG",
-            "договор.docx": b"PK",
+            "договор.pdf": b"%PDF",
         },
     )
     assert [file.name for file in read_archive(archive)] == ["законы/статья.txt"]
@@ -100,7 +100,7 @@ def test_file_that_is_not_an_archive_is_a_knowledge_base_error(tmp_path: Path) -
 
 def test_archive_without_text_files_is_a_knowledge_base_error(tmp_path: Path) -> None:
     archive = _archive(tmp_path / "base.zip", {"схема.png": b"\x89PNG"})
-    with pytest.raises(KnowledgeBaseError, match="нет текстовых файлов"):
+    with pytest.raises(KnowledgeBaseError, match="нет документов"):
         read_archive(archive)
 
 
