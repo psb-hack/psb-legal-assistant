@@ -33,7 +33,10 @@ class RankedProvision:
 
 class Retriever(Protocol):
     def retrieve(self, query: str, limit: int) -> tuple[RankedProvision, ...]:
-        """Положения по убыванию оценки, не больше limit."""
+        """Положения по убыванию оценки, не больше limit.
+
+        RetrievalError — поиск сейчас ответить не может.
+        """
         ...
 
 

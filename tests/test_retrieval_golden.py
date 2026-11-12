@@ -32,7 +32,9 @@ def _bm25() -> dict[str, Any]:
     thresholds = SanitizerThresholds()
     screening = screen(base, default_detectors(thresholds), thresholds)
     retriever = LexicalRetriever(admitted_provisions(base, screening))
-    return summary(evaluate(load_cases(), retriever, base, build_catalog(base)))
+    return summary(
+        evaluate(load_cases(), retriever.retrieve, base, build_catalog(base))
+    )
 
 
 def test_every_source_of_the_golden_set_is_resolved() -> None:

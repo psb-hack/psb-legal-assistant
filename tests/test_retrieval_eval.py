@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import pytest
 
+from lex_dense_retrieval import DenseRetriever, embed_provisions
 from lex_documents import ProvisionId
 from lex_entity_catalog import build_catalog
+from lex_hybrid_retrieval import HybridRetriever, reciprocal_rank_fusion
 from lex_knowledge_base import KnowledgeBase
-from lex_retrieval import RankedProvision
-from lex_sanitizer import AdmittedProvision
+from lex_retrieval import LexicalRetriever, RankedProvision
+from lex_sanitizer import (
+    AdmittedProvision,
+    admitted_provisions,
+    default_detectors,
+    screen,
+)
+from lex_settings import SanitizerThresholds
 from retrieval_eval import (
     EvalCase,
     evaluate,
@@ -20,6 +28,7 @@ from retrieval_eval import (
 )
 from synthetic_base import CONTRACT
 from synthetic_counterparties import TEXTS, knowledge_base
+from table_embedder import TableEmbedder
 
 # К synthetic_counterparties добавлен договор с несколькими пунктами — d11.
 BASE = knowledge_base((*TEXTS, CONTRACT))
@@ -112,7 +121,7 @@ def test_outcome_keeps_rank_of_first_and_of_last_source() -> None:
     (subject,) = _ids(BASE, SUPPLY, "п. 1.1")
     cases = [_case("team-01", "Договор оказания услуг № У-03/2031, п. 2.1, 3.2")]
     retriever = _FixedRetriever([subject, claims, subject, paid])
-    (outcome,) = evaluate(cases, retriever, BASE, CATALOG).outcomes
+    (outcome,) = evaluate(cases, retriever.retrieve, BASE, CATALOG).outcomes
     assert outcome.target_ranks == (4, 2)
     assert outcome.first_rank == 2
     assert outcome.complete_rank == 4
@@ -121,7 +130,9 @@ def test_outcome_keeps_rank_of_first_and_of_last_source() -> None:
 def test_source_missing_from_ranking_leaves_the_case_incomplete() -> None:
     (claims,) = _ids(BASE, SERVICES, "п. 3.2")
     cases = [_case("team-01", "Договор оказания услуг № У-03/2031, п. 2.1, 3.2")]
-    (outcome,) = evaluate(cases, _FixedRetriever([claims]), BASE, CATALOG).outcomes
+    (outcome,) = evaluate(
+        cases, _FixedRetriever([claims]).retrieve, BASE, CATALOG
+    ).outcomes
     assert outcome.first_rank == 1
     assert outcome.complete_rank is None
 
@@ -133,7 +144,9 @@ def test_cases_without_sources_and_with_unresolved_ones_are_counted_apart() -> N
         _case("demo-03", "ТК РФ, ст. 300"),
     ]
     law = sorted(_ids(BASE, LAW))
-    report = summary(evaluate(cases, _FixedRetriever(["d01.1", *law]), BASE, CATALOG))
+    report = summary(
+        evaluate(cases, _FixedRetriever(["d01.1", *law]).retrieve, BASE, CATALOG)
+    )
     assert report["cases"] == {
         "evaluated": 1,
         "without_sources": ["team-01"],
@@ -147,6 +160,34 @@ def test_cases_without_sources_and_with_unresolved_ones_are_counted_apart() -> N
     assert report["mrr"] == 0.5
     assert report["by_origin"] == {"demo": report["overall"]}
     assert report["ranks"] == {"demo-03": {"first": 2, "all": 2}}
+
+
+def test_bm25_dense_and_hybrid_are_measured_by_the_same_harness() -> None:
+    thresholds = SanitizerThresholds()
+    screening = screen(BASE, default_detectors(thresholds), thresholds)
+    admitted = admitted_provisions(BASE, screening)
+    embedder = TableEmbedder({"вентиляц": (1.0, 0.0), "проветриван": (1.0, 0.0)})
+    lexical = LexicalRetriever(admitted)
+    dense = DenseRetriever(embed_provisions(admitted, embedder, 12), embedder)
+    hybrid = HybridRetriever((lexical, dense), reciprocal_rank_fusion)
+    case = EvalCase(
+        "team-01",
+        "direct",
+        "Кто отвечает за проветривание?",
+        ("Договор оказания услуг № У-03/2031, п. 1.1",),
+    )
+    searches = {
+        "bm25": lexical.retrieve,
+        "dense": dense.retrieve,
+        "hybrid": lambda query, limit: hybrid.retrieve(query, limit).hits,
+    }
+    ranks = {
+        name: evaluate([case], search, BASE, CATALOG).outcomes[0].first_rank
+        for name, search in searches.items()
+    }
+    assert ranks["dense"] == 1
+    assert ranks["bm25"] is None or ranks["bm25"] > 1
+    assert ranks["hybrid"] is not None
 
 
 def test_found_within_counts_ranks_up_to_depth() -> None:

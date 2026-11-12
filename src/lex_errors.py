@@ -13,6 +13,10 @@ class ModelGatewayError(LexError):
     """Сбой вызова прокси (сеть, 4xx/5xx после повторов, пустой ответ)."""
 
 
+class RetrievalError(LexError):
+    """Поиск не смог ответить на запрос или построить индекс."""
+
+
 class VerificationError(LexError):
     """Утверждение не подтверждено положением из контекста."""
 
