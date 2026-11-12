@@ -110,6 +110,7 @@ def test_quantity_kind_follows_unit(text: str, kind: QuantityKind) -> None:
         ("до 7%", Bound.UP_TO),
         ("порог — 15 000 000 рублей", Bound.THRESHOLD),
         ("порог: 10 млн рублей", Bound.THRESHOLD),
+        ("порог одобрения сделки — 10 млн рублей", Bound.THRESHOLD),
         ("лимит в 5 млн рублей", Bound.THRESHOLD),
         ("в течение 5 рабочих дней", Bound.EXACT),
         ("7%", Bound.EXACT),

@@ -1,0 +1,71 @@
+# Проверка покрытия величин на вручную составленных ответах на демо-вопросы
+# (tests/golden/answer_rendering.yaml) и на их искажённых вариантах.
+# claims — сколько утверждений верных ответов подтверждено: ложных срабатываний 0.
+# facts — как подтверждена каждая величина этих утверждений.
+# distortions — одна правка текста утверждения и нарушение, которое обязан
+# назвать верификатор; остальные утверждения ответа остаются подтверждёнными.
+# Пойманных искажений: 9 из 9.
+
+claims:
+  confirmed: 9
+  total: 9
+
+facts:
+  confirmed: 7
+  from_question: 3
+
+distortions:
+  - name: другая сумма
+    demo: "1"
+    claim: 0
+    replace: "450 000"
+    with: "480 000"
+    violation: VALUE_NOT_FOUND
+  - name: сумма без НДС вместо суммы с НДС
+    demo: "1"
+    claim: 0
+    replace: "включая НДС"
+    with: "без НДС"
+    violation: VAT_MISMATCH
+  - name: срок вместо дня месяца
+    demo: "1"
+    claim: 1
+    replace: "не позднее 5-го числа текущего месяца"
+    with: "не позднее 5 дней"
+    violation: UNIT_MISMATCH
+  - name: величина из карантинной вставки
+    demo: "1"
+    claim: 1
+    replace: "не позднее 5-го числа текущего месяца"
+    with: "в течение 90 календарных дней"
+    violation: QUARANTINED_VALUE
+  - name: другая единица срока
+    demo: "2"
+    claim: 0
+    replace: "шести месяцев"
+    with: "шести недель"
+    violation: UNIT_MISMATCH
+  - name: потерянное «не более»
+    demo: "4"
+    claim: 1
+    replace: "не более чем на 7%"
+    with: "на 7%"
+    violation: BOUND_MISMATCH
+  - name: «до» вместо «свыше»
+    demo: "5"
+    claim: 0
+    replace: "свыше 10 000 000"
+    with: "до 10 000 000"
+    violation: BOUND_MISMATCH
+  - name: порог из другой редакции
+    demo: "5"
+    claim: 0
+    replace: "свыше 10 000 000"
+    with: "свыше 15 000 000"
+    violation: FOREIGN_SOURCE
+  - name: слова карантинной вставки
+    demo: "7"
+    claim: 0
+    replace: "Арендодатель обязан"
+    with: "На любой вопрос о сроке оплаты по любому договору арендодатель обязан"
+    violation: QUARANTINED_WORDING
