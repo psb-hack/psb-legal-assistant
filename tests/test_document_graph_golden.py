@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 from lex_document_graph import DocumentGraph, build_graph
+from lex_document_links import LinkKind
 from lex_documents import DocumentHeader, DocumentId, ProvisionId, cite
 from lex_knowledge_base import KnowledgeBase, load_knowledge_base
 
@@ -105,10 +106,57 @@ def test_edition_of_the_regulation_on_a_date(case: dict[str, object]) -> None:
 
 
 def test_cited_target_of_the_letter_is_the_clause_of_the_current_edition() -> None:
-    (link,) = (item for item in _graph().links if item.target_provision is not None)
+    (link,) = (item for item in _graph().links if item.kind is LinkKind.SUPPLEMENTS)
     found = _base().find(link.target_provision)
     assert found is not None
     assert cite(*found) == (
         "Регламент согласования договоров ООО «Меридиан» "
         "в редакции от 01.03.2025, п. 5.4"
     )
+
+
+def _cited(provision_id: ProvisionId) -> str:
+    found = _base().find(provision_id)
+    assert found is not None
+    return cite(*found)
+
+
+def test_changed_clause_keeps_both_texts_and_the_condition() -> None:
+    actual = [
+        {
+            "provision": _cited(version.provision),
+            "text": version.text,
+            "stated_in": _cited(version.stated_in),
+            "changed_by": (
+                None if version.changed_by is None else _title(version.changed_by)
+            ),
+            "effective_from": version.effective_from,
+            "condition": (
+                None
+                if version.condition is None
+                else {
+                    "text": version.condition.text,
+                    "stated_in": _cited(version.condition.stated_in),
+                }
+            ),
+        }
+        for version in _graph().provision_versions
+    ]
+    assert actual == EXPECTED["provision_versions"]
+
+
+def test_both_delivery_addresses_are_reachable_from_the_clause_of_the_contract() -> (
+    None
+):
+    address = EXPECTED["provision_versions"][0]["provision"]
+    (clause,) = (
+        document.provision_id(provision)
+        for document in _base().documents
+        for provision in document.provisions
+        if cite(document, provision) == address
+    )
+    versions = _graph().versions_of(clause)
+    assert [version.text for version in versions] == [
+        expected["text"] for expected in EXPECTED["provision_versions"]
+    ]
+    assert [version.condition is not None for version in versions] == [False, True]

@@ -23,6 +23,7 @@ from lex_documents import (
     Provision,
 )
 from lex_normalization import comparison_key
+from lex_numbering import split_numbered_line
 
 _NUMBER_SIGN = "№"
 _WORD = r"[^\W\d_]+"
@@ -51,6 +52,26 @@ _PARENT_DOCUMENT = re.compile(
 _SUPPLEMENT = re.compile(
     rf"[Вв]\s+дополнение\s+к\s+(?:[^.;:]*?{_CLAUSE}\s+)?{_TITLE}{_NUMBER}{_EDITION}"
 )
+_REPLACEMENT_TAIL = r"\sв\s+(?:следующей|новой)\s+редакции\s*:"
+_NAMED = r"(?P<named>[^.;:«]*?)"
+# «Изложить пункт 3.2 договора в следующей редакции:»
+_REPLACE_CLAUSE = re.compile(
+    rf"изложить\s+{_CLAUSE}{_NAMED}{_REPLACEMENT_TAIL}", re.IGNORECASE
+)
+# «Пункт 3.2 договора изложить в новой редакции:»
+_CLAUSE_TO_REPLACE = re.compile(
+    rf"{_CLAUSE}{_NAMED}\sизложить{_REPLACEMENT_TAIL}", re.IGNORECASE
+)
+# «3.2. Товар доставляется Поставщиком по адресу: … склад № 3».
+_QUOTED_TEXT = re.compile(r"^«(?P<text>.+)»[.;]?$")
+# «Новый адрес доставки применяется к партиям Товара, Спецификации на которые
+# подписаны после 1 октября 2024 г.» Срок («применяется с 01.08.2031») условием
+# не считается: это дата начала действия.
+_CONDITION = re.compile(
+    r"(?:применя[ею]тся|распространя[ею]тся|действу[ею]т)\s+(?:только\s+)?"
+    r"(?:к|на|в\s+отношении|для|при)\s",
+    re.IGNORECASE,
+)
 # «Настоящее дополнительное соглашение вступает в силу с даты подписания»
 _FROM_SIGNING = re.compile(
     r"вступает\s+в\s+силу\s+с\s+(?:даты|момента)\s+(?:его\s+)?подписания",
@@ -74,6 +95,8 @@ class LinkKind(Enum):
     SUPERSEDES = "supersedes"
     # Требование добавлено к положению другого документа, текст положения прежний.
     SUPPLEMENTS = "supplements"
+    # Пункт адресата изложен в новой редакции; прежний текст остаётся в адресате.
+    REPLACES_PROVISION = "replaces_provision"
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,10 +106,19 @@ class DocumentReference:
     # Дословно: «п. 5.4 Регламента согласования договоров (ред. от 01.03.2025)».
     text: str
     # Слова названия в ключе сравнения и в том падеже, в каком они записаны.
-    # Пусто — названа только редакция, речь о другой редакции самого источника.
+    # Пусто или одно слово («договора») — документ не назван: это другая редакция
+    # самого источника либо документ, к которому источник заключён.
     title_words: tuple[str, ...]
     number: str | None
     edition: date | None
+
+
+@dataclass(frozen=True, slots=True)
+class Quotation:
+    """Фрагмент источника дословно и положение, в котором он стоит."""
+
+    text: str
+    stated_in: Provision
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +130,10 @@ class LinkStatement:
     # Пункт адресата, если он назван.
     clause: ClauseNumber | None
     effective_from: date | None
+    # Новый текст пункта без его номера; есть только у REPLACES_PROVISION.
+    replacement: Quotation | None
+    # Абзац об условии применения, стоящий сразу за новым текстом.
+    condition: Quotation | None
 
 
 def find_link_statements(document: Document) -> tuple[LinkStatement, ...]:
@@ -106,11 +142,13 @@ def find_link_statements(document: Document) -> tuple[LinkStatement, ...]:
     if not isinstance(header, DocumentHeader):
         return ()
     effective_from = _commencement(document.provisions, header)
-    return tuple(
-        LinkStatement(kind, provision, reference, clause, effective_from)
+    statements = [
+        LinkStatement(kind, provision, reference, clause, effective_from, None, None)
         for provision in document.provisions
         for kind, reference, clause in _named_targets(provision, header)
-    )
+    ]
+    statements.extend(_replacements(document.provisions, effective_from))
+    return tuple(sorted(statements, key=lambda found: found.stated_in.position))
 
 
 def title_words(title: str) -> tuple[str, ...]:
@@ -165,6 +203,58 @@ def _named_targets(
             ),
             _clause(supplement),
         )
+
+
+def _replacements(
+    provisions: Sequence[Provision], effective_from: date | None
+) -> Iterator[LinkStatement]:
+    lines = [
+        (provision, line)
+        for provision in provisions
+        for line in provision.text.splitlines()
+    ]
+    for index, (provision, line) in enumerate(lines):
+        instruction = _REPLACE_CLAUSE.search(line) or _CLAUSE_TO_REPLACE.search(line)
+        if instruction is None:
+            continue
+        clause = _clause(instruction)
+        # Новый текст стоит после двоеточия в том же абзаце либо в следующем.
+        following = lines[index + 1 :]
+        inline = line[instruction.end() :].strip()
+        if inline:
+            following.insert(0, (provision, inline))
+        quoted = _QUOTED_TEXT.match(following[0][1]) if following else None
+        after = following[1] if quoted is not None and len(following) > 1 else None
+        yield LinkStatement(
+            kind=LinkKind.REPLACES_PROVISION,
+            stated_in=provision,
+            reference=DocumentReference(
+                text=line[instruction.start("address") : instruction.end("named")],
+                title_words=title_words(instruction["named"]),
+                number=None,
+                edition=None,
+            ),
+            clause=clause,
+            effective_from=effective_from,
+            replacement=(
+                None
+                if quoted is None
+                else Quotation(_without_number(quoted["text"], clause), following[0][0])
+            ),
+            condition=(
+                None
+                if after is None or _CONDITION.search(after[1]) is None
+                else Quotation(after[1], after[0])
+            ),
+        )
+
+
+def _without_number(text: str, clause: ClauseNumber | None) -> str:
+    """«3.2. Товар доставляется…» → «Товар доставляется…», если номер тот же."""
+    numbered = split_numbered_line(text)
+    if numbered is None or numbered.number != clause:
+        return text
+    return numbered.text
 
 
 def _number(match: re.Match[str]) -> str | None:
