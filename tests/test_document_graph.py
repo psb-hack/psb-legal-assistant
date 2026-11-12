@@ -2,15 +2,25 @@ from datetime import date
 
 import pytest
 
-from lex_document_graph import DocumentGraph, Edition, Link, build_graph
+from lex_document_graph import (
+    ApplicabilityCondition,
+    DocumentGraph,
+    Edition,
+    Link,
+    ProvisionVersion,
+    build_graph,
+)
 from lex_document_links import LinkKind
 from lex_documents import ClauseNumber, DocumentId, ProvisionId
 from synthetic_base import LAW_ARTICLE, MEMO
 from synthetic_links import (
+    CONDITION,
     CONTRACT,
     FROM_SIGNING,
     NEW_RULES,
+    NEW_TEXT,
     OLD_RULES,
+    REPLACEMENT,
     agreement,
     knowledge_base,
     letter,
@@ -43,6 +53,7 @@ def test_supplementary_agreement_is_found_from_its_contract() -> None:
             clause=None,
             target_provision=None,
             effective_from=date(2031, 6, 10),
+            condition=None,
         ),
     )
     assert graph.links_from(D02) == graph.links_to(D01) == graph.links
@@ -158,6 +169,7 @@ def test_letter_supplements_a_clause_of_the_named_edition() -> None:
         clause=ClauseNumber((2, 1)),
         target_provision=ProvisionId("d02.5"),
         effective_from=date(2031, 9, 1),
+        condition=None,
     )
     assert link.is_resolved
 
@@ -196,6 +208,92 @@ def test_supplement_with_missing_target_or_clause_is_unresolved(
 
 def test_documents_that_name_no_other_document_have_no_links() -> None:
     graph = _graph(CONTRACT, MEMO, LAW_ARTICLE, OTHER_CONTRACT)
-    assert graph == DocumentGraph(links=(), families=())
+    assert graph == DocumentGraph(links=(), families=(), provision_versions=())
     assert graph.amendments_of(D01) == ()
     assert graph.family_of(D02) is None
+
+
+REPLACED_CLAUSE = ProvisionId("d01.8")
+ORIGINAL_TEXT = "Материалы завозятся на площадку по адресу: г. Тверь, ул. Речная, д. 4."
+
+
+def test_replaced_clause_keeps_the_original_and_gains_a_conditional_version() -> None:
+    graph = _graph(CONTRACT, agreement(*REPLACEMENT))
+    condition = ApplicabilityCondition(CONDITION, ProvisionId("d02.7"))
+    assert graph.versions_of(REPLACED_CLAUSE) == (
+        ProvisionVersion(
+            provision=REPLACED_CLAUSE,
+            text=ORIGINAL_TEXT,
+            stated_in=REPLACED_CLAUSE,
+            changed_by=None,
+            effective_from=None,
+            condition=None,
+        ),
+        ProvisionVersion(
+            provision=REPLACED_CLAUSE,
+            text=NEW_TEXT,
+            stated_in=ProvisionId("d02.6"),
+            changed_by=D02,
+            effective_from=date(2031, 6, 10),
+            condition=condition,
+        ),
+    )
+    amends, replaces = graph.links_from(D02)
+    assert amends.kind is LinkKind.AMENDS
+    assert replaces == Link(
+        kind=LinkKind.REPLACES_PROVISION,
+        source=D02,
+        stated_in=ProvisionId("d02.5"),
+        reference="пункт 2.2 договора",
+        target=D01,
+        clause=ClauseNumber((2, 2)),
+        target_provision=REPLACED_CLAUSE,
+        effective_from=date(2031, 6, 10),
+        condition=condition,
+    )
+    assert graph.amendments_of(D01) == (D02,)
+    assert graph.unresolved == ()
+
+
+def test_clause_that_nobody_changed_has_no_versions() -> None:
+    graph = _graph(CONTRACT, agreement(*REPLACEMENT))
+    assert graph.versions_of(ProvisionId("d01.7")) == ()
+
+
+def test_original_text_is_kept_once_when_a_clause_is_changed_twice() -> None:
+    second = agreement(*REPLACEMENT).replace("ул. Лесная, д. 8", "ул. Полевая, д. 1")
+    graph = _graph(CONTRACT, agreement(*REPLACEMENT), second)
+    versions = graph.versions_of(REPLACED_CLAUSE)
+    assert [version.changed_by for version in versions] == [None, D02, D03]
+    assert versions[2].text.endswith("ул. Полевая, д. 1")
+
+
+def test_replacement_for_a_missing_contract_stays_unresolved() -> None:
+    graph = _graph(agreement(*REPLACEMENT))
+    assert [link.kind for link in graph.unresolved] == [
+        LinkKind.AMENDS,
+        LinkKind.REPLACES_PROVISION,
+    ]
+    assert graph.provision_versions == ()
+
+
+def test_replacement_of_a_clause_the_contract_lacks_stays_unresolved() -> None:
+    body = [line.replace("2.2", "7.7") for line in REPLACEMENT]
+    graph = _graph(CONTRACT, agreement(*body))
+    (link,) = graph.unresolved
+    assert (link.target, link.target_provision) == (D01, None)
+    assert graph.provision_versions == ()
+
+
+def test_document_named_by_title_is_changed_without_a_parent_contract() -> None:
+    sentence = (
+        "Изложить пункт 2.1 Положения о закупках в следующей редакции: "
+        "«2.1. Закупку согласует главный бухгалтер»."
+    )
+    graph = _graph(OLD_RULES, NEW_RULES, letter(sentence))
+    versions = graph.versions_of(ProvisionId("d02.5"))
+    assert [version.text for version in versions] == [
+        "Закупку согласует финансовый директор.",
+        "Закупку согласует главный бухгалтер",
+    ]
+    assert versions[1].effective_from == date(2031, 9, 1)

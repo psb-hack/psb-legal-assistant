@@ -6,9 +6,12 @@ from lex_document_links import LinkKind, LinkStatement, find_link_statements
 from lex_documents import ClauseNumber
 from synthetic_base import LAW_ARTICLE, MEMO
 from synthetic_links import (
+    CONDITION,
     CONTRACT,
     FROM_SIGNING,
+    NEW_CLAUSE,
     NEW_RULES,
+    NEW_TEXT,
     OLD_RULES,
     agreement,
     document,
@@ -148,3 +151,83 @@ def test_commencement_date_of_the_source(
 @pytest.mark.parametrize("text", [CONTRACT, MEMO, LAW_ARTICLE])
 def test_document_that_names_no_other_document_has_no_statements(text: str) -> None:
     assert _statements(text) == ()
+
+
+INSTRUCTION = "Изложить пункт 2.2 договора в следующей редакции:"
+
+
+def _replacement(*body: str) -> LinkStatement:
+    (statement,) = (
+        found
+        for found in _statements(agreement(*body))
+        if found.kind is LinkKind.REPLACES_PROVISION
+    )
+    return statement
+
+
+@pytest.mark.parametrize(
+    ("body", "reference"),
+    [
+        ((INSTRUCTION, NEW_CLAUSE, CONDITION), "пункт 2.2 договора"),
+        (
+            (f"Пункт 2.2 договора изложить в новой редакции: {NEW_CLAUSE}", CONDITION),
+            "Пункт 2.2 договора",
+        ),
+        (
+            (
+                "1. Изложить п. 2.2 договора в следующей редакции:",
+                NEW_CLAUSE,
+                f"2. {CONDITION}",
+            ),
+            "п. 2.2 договора",
+        ),
+    ],
+)
+def test_replaced_clause_gives_new_text_and_adjacent_condition(
+    body: tuple[str, ...], reference: str
+) -> None:
+    statement = _replacement(*body)
+    assert statement.clause == ClauseNumber((2, 2))
+    assert statement.reference.text == reference
+    assert statement.reference.title_words == ("договора",)
+    assert statement.replacement is not None
+    assert statement.replacement.text == NEW_TEXT
+    assert statement.condition is not None
+    assert statement.condition.text == CONDITION
+
+
+def test_new_text_and_condition_point_at_their_own_paragraphs() -> None:
+    statement = _replacement(INSTRUCTION, NEW_CLAUSE, CONDITION)
+    assert statement.stated_in.label == "абз. 1"
+    assert statement.replacement is not None
+    assert statement.replacement.stated_in.label == "абз. 2"
+    assert statement.condition is not None
+    assert statement.condition.stated_in.label == "абз. 3"
+
+
+def test_instruction_without_quoted_text_has_no_new_text() -> None:
+    statement = _replacement(INSTRUCTION, "Текст пункта стороны согласуют отдельно.")
+    assert statement.replacement is None
+    assert statement.condition is None
+
+
+@pytest.mark.parametrize(
+    ("after", "effective_from"),
+    [
+        (FROM_SIGNING, date(2031, 6, 10)),
+        # Срок — это дата начала действия, а не условие.
+        ("Новый адрес применяется с 01.08.2031.", date(2031, 8, 1)),
+    ],
+)
+def test_paragraph_after_new_text_is_not_always_a_condition(
+    after: str, effective_from: date
+) -> None:
+    statement = _replacement(INSTRUCTION, NEW_CLAUSE, after)
+    assert statement.condition is None
+    assert statement.effective_from == effective_from
+
+
+def test_number_of_another_clause_stays_in_the_new_text() -> None:
+    statement = _replacement(INSTRUCTION, "«2.3. Материалы принимает прораб».")
+    assert statement.replacement is not None
+    assert statement.replacement.text == "2.3. Материалы принимает прораб"
