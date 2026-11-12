@@ -60,6 +60,7 @@ SRC_MODULES = (
     "lex_settings.py",
     "lex_structure_detection.py",
     "lex_submission.py",
+    "lex_verification.py",
 )
 
 
