@@ -61,7 +61,7 @@ _REPEAL = re.compile(
     rf"{_REPEAL_VERB}(?:\s+с\s+(?P<date>{DATE_PATTERN}))?", re.IGNORECASE
 )
 # «Редакция от 10.01.2023 утрачивает силу.» — силу теряет названная редакция.
-_REPEALED_EDITION = re.compile(
+REPEALED_EDITION = re.compile(
     rf"редакци\w+\s+от\s+(?P<date>{DATE_PATTERN})(?:\s*г\.)?\s+{_REPEAL_VERB}",
     re.IGNORECASE,
 )
@@ -209,7 +209,7 @@ def _own_repeal(
     for statement in statements:
         if _REPEAL.search(statement) is None:
             continue
-        repealed_edition = _first_date(_REPEALED_EDITION, [statement])
+        repealed_edition = _first_date(REPEALED_EDITION, [statement])
         if repealed_edition is None or repealed_edition in (edition, dated):
             return statement
     return None
