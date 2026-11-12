@@ -1,0 +1,130 @@
+# Упоминания контрагентов и документов на настоящей базе.
+# outcome: resolved | ambiguous | not_found; entities — наименования контрагентов
+# и заголовки документов (для not_found — похожие документы).
+
+# Все 18 демо-вопросов; пустой список — в вопросе никто не назван.
+# Диалог здесь распознаётся целиком, вместе с репликами ассистента.
+demo_questions:
+  "1":
+    - {text: Северный Склад, outcome: resolved, entities: [ООО «Северный Склад»], evidence: FULL_NAME}
+  "2": []
+  "3": []
+  "4":
+    - {text: Северный Склад, outcome: resolved, entities: [ООО «Северный Склад»], evidence: FULL_NAME}
+  "5": []
+  "6":
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+    - {text: П-17/2024, outcome: resolved, entities: ["Договор поставки № П-17/2024"], evidence: IDENTIFIER}
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+  # «К нашему складу в Химках» упоминанием не является: «склад» — обычное слово базы.
+  "7":
+    - {text: Северным Складом, outcome: resolved, entities: [ООО «Северный Склад»], evidence: FULL_NAME}
+  "8":
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+  "9":
+    - {text: Альфа-Трейдинг, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+  "10": []
+  "11": []
+  "12": []
+  "13": []
+  "14": []
+  "15":
+    - {text: Северного Склада, outcome: resolved, entities: [ООО «Северный Склад»], evidence: FULL_NAME}
+    - {text: А-08/2024, outcome: resolved, entities: ["Договор аренды нежилого помещения № А-08/2024"], evidence: IDENTIFIER}
+  "16":
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+    - {text: П-17/2024, outcome: resolved, entities: ["Договор поставки № П-17/2024"], evidence: IDENTIFIER}
+  "17":
+    - {text: Альфой, outcome: ambiguous, entities: [ООО «Альфа-Трейд», ООО «Альфа-Трейдинг»], evidence: PARTIAL}
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+    - {text: Альфа-Трейдинг, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+    - {text: Альфа-Трейдинг, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+  "18":
+    - {text: Меридиан, outcome: resolved, entities: [ООО «Меридиан»], evidence: FULL_NAME}
+
+# Реплики пользователя распознаны по отдельности и объединены combine_turns.
+# В вопросе 17 «Альфой» снимается ответом «Альфа-Трейдинг»; в вопросе 18
+# контрагента назвал только ассистент.
+user_turns:
+  "6":
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+  "15":
+    - {text: Северного Склада, outcome: resolved, entities: [ООО «Северный Склад»], evidence: FULL_NAME}
+    - {text: А-08/2024, outcome: resolved, entities: ["Договор аренды нежилого помещения № А-08/2024"], evidence: IDENTIFIER}
+  "16":
+    - {text: Альфа-Трейд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+    - {text: П-17/2024, outcome: resolved, entities: ["Договор поставки № П-17/2024"], evidence: IDENTIFIER}
+  "17":
+    - {text: Альфа-Трейдинг, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+  "18": []
+
+# Формулировки вне демо-набора: ловушки базы, опечатки, записи номеров.
+phrases:
+  - text: "«Альфа» привезла мебель с дефектами"
+    mentions:
+      - {text: Альфа, outcome: ambiguous, entities: [ООО «Альфа-Трейд», ООО «Альфа-Трейдинг»], evidence: PARTIAL}
+  - text: Какой срок оплаты у альфа-трейда?
+    mentions:
+      - {text: альфа-трейда, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FULL_NAME}
+  - text: Претензия к Альфа-Трейдингу
+    mentions:
+      - {text: Альфа-Трейдингу, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+  - text: К нашему складу в Химках грузовик приезжает ночью
+    mentions: []
+  - text: Сравни сроки оплаты по П-17/2024 и по договору с «Альфа-Трейдингом»
+    mentions:
+      - {text: П-17/2024, outcome: resolved, entities: ["Договор поставки № П-17/2024"], evidence: IDENTIFIER}
+      - {text: Альфа-Трейдингом, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+  # Номер и наименование расходятся: оба результата уходят наверх.
+  - text: Что по договору P-17/2024 с Альфа Трейдинг?
+    mentions:
+      - {text: P-17/2024, outcome: resolved, entities: ["Договор поставки № П-17/2024"], evidence: IDENTIFIER}
+      - {text: Альфа Трейдинг, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FULL_NAME}
+  - text: PT-05/2023 и A-08/2024
+    mentions:
+      - {text: PT-05/2023, outcome: resolved, entities: ["Договор поставки № ПТ-05/2023"], evidence: IDENTIFIER}
+      - {text: A-08/2024, outcome: resolved, entities: ["Договор аренды нежилого помещения № А-08/2024"], evidence: IDENTIFIER}
+  - text: договор п-17
+    mentions:
+      - {text: п-17, outcome: resolved, entities: ["Договор поставки № П-17/2024"], evidence: PARTIAL}
+  - text: договор П-17/2023
+    mentions:
+      - {text: П-17/2023, outcome: not_found, entities: ["Договор поставки № П-17/2024"], evidence: null}
+  - text: письмо К-12 и записка ЮО-7
+    mentions:
+      - {text: К-12, outcome: resolved, entities: ["Письмо № К-12 от 15.04.2025"], evidence: IDENTIFIER}
+      - {text: ЮО-7, outcome: resolved, entities: ["Служебная записка № ЮО-7 от 12.05.2025"], evidence: IDENTIFIER}
+  - text: поставщик с ИНН 7714567890
+    mentions:
+      - {text: "7714567890", outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: IDENTIFIER}
+  - text: договор с ООО «Альфа-Банк»
+    mentions:
+      - {text: ООО «Альфа-Банк», outcome: not_found, entities: [], evidence: null}
+  - text: договор с альфа трэйд
+    mentions:
+      - {text: альфа трэйд, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FUZZY}
+  - text: счёт от альфа трейдинк
+    mentions:
+      - {text: альфа трейдинк, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FUZZY}
+  - text: письмо от Трейднига
+    mentions:
+      - {text: Трейднига, outcome: resolved, entities: [ООО «Альфа-Трейдинг»], evidence: FUZZY}
+  # Опечатка в хвосте, который и различает контрагентов.
+  - text: договор с альфа трейдин
+    mentions:
+      - {text: альфа трейдин, outcome: ambiguous, entities: [ООО «Альфа-Трейд», ООО «Альфа-Трейдинг»], evidence: FUZZY}
+  - text: аренда у севреного склада
+    mentions:
+      - {text: севреного склада, outcome: resolved, entities: [ООО «Северный Склад»], evidence: FUZZY}
+  - text: Мередиан подписал акт
+    mentions:
+      - {text: Мередиан, outcome: resolved, entities: [ООО «Меридиан»], evidence: FUZZY}
+  - text: бета трейд, альфа банк, южный склад и северный поток
+    mentions: []
+  - text: аренда у севернова склада
+    mentions: []
+  # Известное ложное срабатывание: настоящее слово в одной правке от наименования.
+  # Пометка FUZZY обязывает ответ назвать контрагента полностью.
+  - text: договор с альфа трейдер
+    mentions:
+      - {text: альфа трейдер, outcome: resolved, entities: [ООО «Альфа-Трейд»], evidence: FUZZY}

@@ -22,6 +22,7 @@ SRC_MODULES = (
     "lex_documents.py",
     "lex_docx_reading.py",
     "lex_entity_catalog.py",
+    "lex_entity_recognition.py",
     "lex_errors.py",
     "lex_gateway.py",
     "lex_injection_classifier.py",
