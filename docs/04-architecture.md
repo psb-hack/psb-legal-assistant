@@ -131,6 +131,8 @@ NFKC и свёртка похожих букв есть только в ключ
 | `lex_structure_detection.py` | `StructureDetector` (разметка, метки ролей, скрытый текст, текст после подписи), `ConcealmentDetector` (находки нормализации) |
 | `lex_sanitizer.py` | `screen(base, detectors, thresholds) -> Screening`, `decide`, окно соседних абзацев, `admitted_text` |
 | `lex_settings.py` | `SanitizerThresholds`: пороги агрегатора, маскировки и размер окна |
+| `lex_injection_prompt.py` | Промпт классификатора `INJECTION_CLASSIFIER_PROMPT_V1`, примеры, сборка сообщений |
+| `lex_injection_classifier.py` | `classify(fragment, model, marker)`, `review_suspects(screening, model, next_marker)`: решение по фрагментам со слабым сигналом за протоколом `ChatModel` |
 
 Санитайзер документы не меняет. `Screening` — журнал решений по `ProvisionId` и номеру абзаца; индекс (PSB-16) и сборка контекста (PSB-52) берут текст положения через `admitted_text`, верификатор (PSB-31) по тому же журналу отклоняет доказательства из карантина. Роль фрагмента отдельным `Enum` не заведена: её заменяют вердикт и признаки сигналов в журнале. Правила детекторов, измеренный recall и ограничения — в [модели угроз](07-security.md#санитайзер-базы).
 

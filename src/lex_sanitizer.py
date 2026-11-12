@@ -37,6 +37,8 @@ class Verdict(Enum):
     QUARANTINED = "quarantined"
     # Слабый сигнал: в индекс идёт, окончательно решает классификатор.
     SUSPECT = "suspect"
+    # Слабый сигнал был, классификатор указаний ИИ-системе не нашёл.
+    CLEARED = "cleared"
 
 
 @dataclass(frozen=True, slots=True)
