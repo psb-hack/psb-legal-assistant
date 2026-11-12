@@ -36,7 +36,9 @@ _UNREMARKABLE_FORMAT = frozenset("﻿­")
 _QUOTES = dict.fromkeys(map(ord, "«»„“”‟❝❞＂"), '"') | dict.fromkeys(
     map(ord, "‘’‚‛`´"), "'"
 )
-_DASHES = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
+# Всё, чем набирают дефис и тире, кроме самого «-».
+DASH_VARIANTS = "‐‑‒–—―−"
+_DASHES = dict.fromkeys(map(ord, DASH_VARIANTS), "-")
 _YO = {ord("ё"): "е"}
 _PUNCTUATION_VARIANTS = _QUOTES | _DASHES | _YO
 _WHITESPACE_RUN = re.compile(r"\s+")
@@ -59,7 +61,7 @@ _LOOKALIKE_PAIRS = (
     ("х", "x"),
 )
 _TO_LATIN = dict(_LOOKALIKE_PAIRS)
-_TO_CYRILLIC = {latin: cyrillic for cyrillic, latin in _LOOKALIKE_PAIRS}
+CYRILLIC_LOOKALIKES = {latin: cyrillic for cyrillic, latin in _LOOKALIKE_PAIRS}
 _SAMPLE_WORDS = 5
 
 # «0KHQutGA0L7QuiDQvtC/0LvQsNGC0Ysg0LjQt9C80LXQvdGR0L0=» — не короче 24 знаков:
@@ -197,7 +199,7 @@ def _fold_lookalikes(text: str) -> tuple[str, tuple[str, ...]]:
         if not cyrillic or not latin:
             return word
         mixed_words.append(word)
-        table = _TO_CYRILLIC if cyrillic >= latin else _TO_LATIN
+        table = CYRILLIC_LOOKALIKES if cyrillic >= latin else _TO_LATIN
         return "".join(table.get(ch, ch) for ch in word)
 
     return _WORD.sub(fold, text), tuple(mixed_words)

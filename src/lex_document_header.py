@@ -23,7 +23,7 @@ _KIND_BY_GENRE = {
     "письмо": DocumentKind.LETTER,
 }
 _LETTER_TITLE = "Письмо"
-_LEGAL_FORMS = ("ООО", "АО", "ПАО", "ЗАО", "ОАО", "НАО", "ИП")
+LEGAL_FORMS = ("ООО", "АО", "ПАО", "ЗАО", "ОАО", "НАО", "ИП")
 _NUMBER_SIGN = "№"
 _SENTENCE_ENDINGS = (".", "!", "?", ":", ";")
 
@@ -74,7 +74,7 @@ _FULL_PARTY = re.compile(
 )
 # «ООО «Альфа-Трейд» («Поставщик») в лице …»
 _SHORT_PARTY = re.compile(
-    rf"(?P<name>(?:{'|'.join(_LEGAL_FORMS)})\s+«[^»]+»)\s+\(«(?P<role>[^»]+)»\)"
+    rf"(?P<name>(?:{'|'.join(LEGAL_FORMS)})\s+«[^»]+»)\s+\(«(?P<role>[^»]+)»\)"
 )
 _HEADER_STATEMENTS = (
     _ENDS_WITH_DATE,
@@ -170,7 +170,7 @@ def _without_capitals(line: str) -> str:
     cased: list[str] = []
     for index, word in enumerate(words):
         follows_number_sign = index > 0 and words[index - 1] == _NUMBER_SIGN
-        if follows_number_sign or word in _LEGAL_FORMS or not word.isupper():
+        if follows_number_sign or word in LEGAL_FORMS or not word.isupper():
             cased.append(word)
         elif word.startswith("«"):
             cased.append("«" + word[1:].capitalize())
