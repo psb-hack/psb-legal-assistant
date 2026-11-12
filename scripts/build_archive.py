@@ -50,6 +50,7 @@ SRC_MODULES = (
     "lex_retrieval.py",
     "lex_retry.py",
     "lex_role_markers.py",
+    "lex_routing.py",
     "lex_sanitizer.py",
     "lex_scenarios.py",
     "lex_search_tokens.py",
