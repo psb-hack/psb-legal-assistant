@@ -129,9 +129,7 @@ class _Run:
             print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
 
 
-def _answer_stub(
-    question: Question, _stage: PipelineStage, _deadline: Deadline
-) -> str:
+def _answer_stub(question: Question, _stage: PipelineStage, _deadline: Deadline) -> str:
     return placeholder_answer(question)
 
 
