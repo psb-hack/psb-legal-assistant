@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from lex_deadline import Deadline
 from lex_errors import ModelGatewayError
 from lex_gateway import ProxyGateway
 from lex_models import ChatTurn, FinishReason
@@ -282,3 +283,33 @@ def test_archive_includes_gateway_modules(tmp_path: Path) -> None:
     assert "lex_gateway.py" in names
     assert "lex_models.py" in names
     assert "lex_retry.py" in names
+    assert "lex_deadline.py" in names
+
+
+class _StuckClock:
+    def monotonic(self) -> float:
+        return 100.0
+
+
+def test_expired_deadline_skips_http() -> None:
+    hits = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        hits["n"] += 1
+        return httpx.Response(200, json={"choices": []})
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.Client(base_url="http://proxy.test/v1", transport=transport)
+    clock = _StuckClock()
+    deadline = Deadline(end_monotonic=1.0, reserve_s=0.0)
+    gateway = ProxyGateway(
+        _settings(),
+        client=client,
+        policy=RetryPolicy.standard(rng=random.Random(0), deadline_monotonic=1.0),
+        clock=clock,
+        sleeper=FakeSleeper(),
+        deadline=deadline,
+    )
+    with pytest.raises(ModelGatewayError, match="таймаут"):
+        gateway.complete([ChatTurn(role="user", content="?")])
+    assert hits["n"] == 0

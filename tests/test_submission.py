@@ -5,6 +5,7 @@ import pytest
 from lex_errors import SubmissionError
 from lex_submission import (
     NO_PROVISIONS_YET,
+    TIME_LIMIT_STUB,
     Question,
     check_submission,
     load_questions,
@@ -51,6 +52,12 @@ def test_check_submission_rejects_empty_file(tmp_path: Path) -> None:
     path = tmp_path / "missing.csv"
     with pytest.raises(SubmissionError, match="нет файла"):
         check_submission(path, ["1"])
+
+
+def test_time_limit_stub_has_no_facts() -> None:
+    assert TIME_LIMIT_STUB.strip()
+    assert "А-08" not in TIME_LIMIT_STUB
+    assert "450" not in TIME_LIMIT_STUB
 
 
 def test_placeholder_has_no_demo_facts() -> None:

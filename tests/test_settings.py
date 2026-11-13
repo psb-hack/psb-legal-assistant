@@ -25,6 +25,8 @@ def test_settings_prefer_llm_names() -> None:
             "MAX_WORKERS": "2",
             "TOP_K": "5",
             "RERANKER_TOP_N": "3",
+            "RUN_TIMEOUT": "600",
+            "RESERVE_S": "15",
         }
     )
     assert settings.data_dir.as_posix() == "kb"
@@ -34,4 +36,6 @@ def test_settings_prefer_llm_names() -> None:
     assert settings.embedding_model == "bge-m3"
     assert settings.reranker_model == "qwen-rerank"
     assert settings.max_workers == 2
+    assert settings.run_timeout_s == 600.0
+    assert settings.reserve_s == 15.0
     assert "k1" not in repr(settings)

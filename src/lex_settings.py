@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from lex_deadline import DEFAULT_RESERVE_S, DEFAULT_RUN_TIMEOUT_S
 from lex_secrets import Secret
 
 _DEFAULT_DATA_DIR = "data"
@@ -36,6 +37,8 @@ class Settings:
     max_workers: int
     top_k: int
     reranker_top_n: int
+    run_timeout_s: float
+    reserve_s: float
     sanitizer: SanitizerThresholds
 
     @classmethod
@@ -53,6 +56,10 @@ class Settings:
             max_workers=_int(environ.get("MAX_WORKERS"), 4),
             top_k=_int(environ.get("TOP_K"), 8),
             reranker_top_n=_int(environ.get("RERANKER_TOP_N"), 8),
+            run_timeout_s=_float(
+                environ.get("RUN_TIMEOUT"), float(DEFAULT_RUN_TIMEOUT_S)
+            ),
+            reserve_s=_float(environ.get("RESERVE_S"), DEFAULT_RESERVE_S),
             sanitizer=SanitizerThresholds(),
         )
 
