@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 
 import httpx
 
+from lex_deadline import Deadline
 from lex_errors import ModelGatewayError
 from lex_models import (
     ChatResult,
@@ -49,6 +50,7 @@ class ProxyGateway:
         policy: RetryPolicy | None = None,
         clock: Clock | None = None,
         sleeper: Sleeper | None = None,
+        deadline: Deadline | None = None,
     ) -> None:
         self._settings = settings
         self._owns_client = client is None
@@ -68,9 +70,12 @@ class ProxyGateway:
             timeout=timeout,
             limits=limits,
         )
-        self._policy = policy or RetryPolicy.standard()
         self._clock = clock or WallClock()
         self._sleeper = sleeper or WallSleeper()
+        self._deadline = deadline
+        self._policy = policy or RetryPolicy.standard(
+            deadline_monotonic=None if deadline is None else deadline.work_end
+        )
 
     def close(self) -> None:
         if self._owns_client:
@@ -164,6 +169,8 @@ class ProxyGateway:
         return self._call(parse)
 
     def _call(self, attempt: Callable[[], T]) -> T:
+        if self._deadline is not None and self._deadline.expired(self._clock):
+            raise ModelGatewayError("таймаут прокси")
         try:
             return run_with_retries(
                 self._policy,
@@ -176,8 +183,10 @@ class ProxyGateway:
             raise ModelGatewayError(f"прокси HTTP {exc.status}") from exc
 
     def _send(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if self._deadline is not None and self._deadline.expired(self._clock):
+            raise ModelGatewayError("таймаут прокси")
         try:
-            response = self._client.post(path, json=payload)
+            response = self._client.post(path, json=payload, timeout=self._timeout())
         except httpx.TimeoutException as exc:
             raise ModelGatewayError("таймаут прокси") from exc
         except httpx.RequestError as exc:
@@ -194,6 +203,14 @@ class ProxyGateway:
         if not isinstance(data, dict):
             raise ModelGatewayError("тело ответа не объект")
         return data
+
+    def _timeout(self) -> httpx.Timeout:
+        read = READ_TIMEOUT
+        connect = CONNECT_TIMEOUT
+        if self._deadline is not None:
+            read = self._deadline.call_timeout(self._clock, READ_TIMEOUT)
+            connect = self._deadline.call_timeout(self._clock, CONNECT_TIMEOUT)
+        return httpx.Timeout(connect=connect, read=read, write=30.0, pool=connect)
 
 
 class _UnusableCompletionError(ModelGatewayError):

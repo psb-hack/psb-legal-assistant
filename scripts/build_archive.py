@@ -17,6 +17,8 @@ SRC_MODULES = (
     "lex_answer_rendering.py",
     "lex_company_parsing.py",
     "lex_dates.py",
+    "lex_deadline.py",
+    "lex_degrade.py",
     "lex_declension.py",
     "lex_dense_retrieval.py",
     "lex_detection.py",
